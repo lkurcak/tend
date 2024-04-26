@@ -19,16 +19,6 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-#[cfg(windows)]
-pub fn main() -> windows_service::Result<()> {
-    ping_service::run()
-}
-
-#[cfg(not(windows))]
-fn main() {
-    panic!("This program is only intended to run on Windows.");
-}
-
 /// Logs a message to a specified log file.
 fn log_message(file: &mut File, message: &str) -> io::Result<()> {
     // Optionally, prepend a timestamp or other metadata to each log entry
@@ -41,147 +31,142 @@ fn log_message(file: &mut File, message: &str) -> io::Result<()> {
     writeln!(file, "{}: {}", timestamp, message)
 }
 
+use std::{
+    ffi::OsString,
+    fs::OpenOptions,
+    net::{IpAddr, SocketAddr, UdpSocket},
+    sync::mpsc,
+    time::Duration,
+};
+use windows_service::{
+    define_windows_service,
+    service::{
+        ServiceControl, ServiceControlAccept, ServiceExitCode, ServiceState, ServiceStatus,
+        ServiceType,
+    },
+    service_control_handler::{self, ServiceControlHandlerResult},
+    service_dispatcher, Result,
+};
+
+const SERVICE_NAME: &str = "ping_service";
+const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;
+
+const LOOPBACK_ADDR: [u8; 4] = [127, 0, 0, 1];
+const RECEIVER_PORT: u16 = 1234;
+const PING_MESSAGE: &str = "ping from the ping service 123\n";
+
 #[cfg(windows)]
-#[allow(clippy::module_inception)]
-mod ping_service {
-    use std::{
-        ffi::OsString,
-        fs::OpenOptions,
-        net::{IpAddr, SocketAddr, UdpSocket},
-        sync::mpsc,
-        time::Duration,
-    };
-    use windows_service::{
-        define_windows_service,
-        service::{
-            ServiceControl, ServiceControlAccept, ServiceExitCode, ServiceState, ServiceStatus,
-            ServiceType,
-        },
-        service_control_handler::{self, ServiceControlHandlerResult},
-        service_dispatcher, Result,
-    };
+pub fn main() -> Result<()> {
+    println!("Starting ping service");
+    // Register generated `ffi_service_main` with the system and start the service, blocking
+    // this thread until the service is stopped.
+    service_dispatcher::start(SERVICE_NAME, ffi_service_main)
+}
 
-    use super::log_message;
+// Generate the windows service boilerplate.
+// The boilerplate contains the low-level service entry function (ffi_service_main) that parses
+// incoming service arguments into Vec<OsString> and passes them to user defined service
+// entry (my_service_main).
+define_windows_service!(ffi_service_main, my_service_main);
 
-    const SERVICE_NAME: &str = "ping_service";
-    const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;
-
-    const LOOPBACK_ADDR: [u8; 4] = [127, 0, 0, 1];
-    const RECEIVER_PORT: u16 = 1234;
-    const PING_MESSAGE: &str = "ping\n";
-
-    pub fn run() -> Result<()> {
-        println!("Starting ping service");
-        // Register generated `ffi_service_main` with the system and start the service, blocking
-        // this thread until the service is stopped.
-        service_dispatcher::start(SERVICE_NAME, ffi_service_main)
+// Service entry function which is called on background thread by the system with service
+// parameters. There is no stdout or stderr at this point so make sure to configure the log
+// output to file if needed.
+pub fn my_service_main(_arguments: Vec<OsString>) {
+    // Open or create a log file
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("app.log") {
+        // Use the log_message function to log some messages
+        let _ = log_message(&mut file, "The service is starting up");
+        let _ = log_message(&mut file, "Performing an operation...");
+        let _ = log_message(&mut file, "The service is shutting down");
     }
 
-    // Generate the windows service boilerplate.
-    // The boilerplate contains the low-level service entry function (ffi_service_main) that parses
-    // incoming service arguments into Vec<OsString> and passes them to user defined service
-    // entry (my_service_main).
-    define_windows_service!(ffi_service_main, my_service_main);
+    if let Err(_e) = run_service() {
+        // Handle the error, by logging or something.
+    }
+}
 
-    // Service entry function which is called on background thread by the system with service
-    // parameters. There is no stdout or stderr at this point so make sure to configure the log
-    // output to file if needed.
-    pub fn my_service_main(_arguments: Vec<OsString>) {
-        // Open or create a log file
-        if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("app.log") {
-            // Use the log_message function to log some messages
-            let _ = log_message(&mut file, "The service is starting up");
-            let _ = log_message(&mut file, "Performing an operation...");
-            let _ = log_message(&mut file, "The service is shutting down");
-        }
-
-        if let Err(_e) = run_service() {
-            // Handle the error, by logging or something.
-        }
+pub fn run_service() -> Result<()> {
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("run.log") {
+        // Use the log_message function to log some messages
+        let _ = log_message(&mut file, "The service is starting up");
+        let _ = log_message(&mut file, "Performing an operation...");
+        let _ = log_message(&mut file, "The service is shutting down");
     }
 
-    pub fn run_service() -> Result<()> {
-        if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("run.log") {
-            // Use the log_message function to log some messages
-            let _ = log_message(&mut file, "The service is starting up");
-            let _ = log_message(&mut file, "Performing an operation...");
-            let _ = log_message(&mut file, "The service is shutting down");
-        }
+    // Create a channel to be able to poll a stop event from the service worker loop.
+    let (shutdown_tx, shutdown_rx) = mpsc::channel();
 
-        // Create a channel to be able to poll a stop event from the service worker loop.
-        let (shutdown_tx, shutdown_rx) = mpsc::channel();
+    // Define system service event handler that will be receiving service events.
+    let event_handler = move |control_event| -> ServiceControlHandlerResult {
+        match control_event {
+            // Notifies a service to report its current status information to the service
+            // control manager. Always return NoError even if not implemented.
+            ServiceControl::Interrogate => ServiceControlHandlerResult::NoError,
 
-        // Define system service event handler that will be receiving service events.
-        let event_handler = move |control_event| -> ServiceControlHandlerResult {
-            match control_event {
-                // Notifies a service to report its current status information to the service
-                // control manager. Always return NoError even if not implemented.
-                ServiceControl::Interrogate => ServiceControlHandlerResult::NoError,
-
-                // Handle stop
-                ServiceControl::Stop => {
-                    shutdown_tx.send(()).unwrap();
-                    ServiceControlHandlerResult::NoError
-                }
-
-                // treat the UserEvent as a stop request
-                ServiceControl::UserEvent(code) => {
-                    if code.to_raw() == 130 {
-                        shutdown_tx.send(()).unwrap();
-                    }
-                    ServiceControlHandlerResult::NoError
-                }
-
-                _ => ServiceControlHandlerResult::NotImplemented,
+            // Handle stop
+            ServiceControl::Stop => {
+                shutdown_tx.send(()).unwrap();
+                ServiceControlHandlerResult::NoError
             }
-        };
 
-        // Register system service event handler.
-        // The returned status handle should be used to report service status changes to the system.
-        let status_handle = service_control_handler::register(SERVICE_NAME, event_handler)?;
+            // treat the UserEvent as a stop request
+            ServiceControl::UserEvent(code) => {
+                if code.to_raw() == 130 {
+                    shutdown_tx.send(()).unwrap();
+                }
+                ServiceControlHandlerResult::NoError
+            }
 
-        // Tell the system that service is running
-        status_handle.set_service_status(ServiceStatus {
-            service_type: SERVICE_TYPE,
-            current_state: ServiceState::Running,
-            controls_accepted: ServiceControlAccept::STOP,
-            exit_code: ServiceExitCode::Win32(0),
-            checkpoint: 0,
-            wait_hint: Duration::default(),
-            process_id: None,
-        })?;
-
-        // For demo purposes this service sends a UDP packet once a second.
-        let loopback_ip = IpAddr::from(LOOPBACK_ADDR);
-        let sender_addr = SocketAddr::new(loopback_ip, 0);
-        let receiver_addr = SocketAddr::new(loopback_ip, RECEIVER_PORT);
-        let msg = PING_MESSAGE.as_bytes();
-        let socket = UdpSocket::bind(sender_addr).unwrap();
-
-        loop {
-            let _ = socket.send_to(msg, receiver_addr);
-
-            // Poll shutdown event.
-            match shutdown_rx.recv_timeout(Duration::from_secs(1)) {
-                // Break the loop either upon stop or channel disconnect
-                Ok(_) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
-
-                // Continue work if no events were received within the timeout
-                Err(mpsc::RecvTimeoutError::Timeout) => (),
-            };
+            _ => ServiceControlHandlerResult::NotImplemented,
         }
+    };
 
-        // Tell the system that service has stopped.
-        status_handle.set_service_status(ServiceStatus {
-            service_type: SERVICE_TYPE,
-            current_state: ServiceState::Stopped,
-            controls_accepted: ServiceControlAccept::empty(),
-            exit_code: ServiceExitCode::Win32(0),
-            checkpoint: 0,
-            wait_hint: Duration::default(),
-            process_id: None,
-        })?;
+    // Register system service event handler.
+    // The returned status handle should be used to report service status changes to the system.
+    let status_handle = service_control_handler::register(SERVICE_NAME, event_handler)?;
 
-        Ok(())
+    // Tell the system that service is running
+    status_handle.set_service_status(ServiceStatus {
+        service_type: SERVICE_TYPE,
+        current_state: ServiceState::Running,
+        controls_accepted: ServiceControlAccept::STOP,
+        exit_code: ServiceExitCode::Win32(0),
+        checkpoint: 0,
+        wait_hint: Duration::default(),
+        process_id: None,
+    })?;
+
+    // For demo purposes this service sends a UDP packet once a second.
+    let loopback_ip = IpAddr::from(LOOPBACK_ADDR);
+    let sender_addr = SocketAddr::new(loopback_ip, 0);
+    let receiver_addr = SocketAddr::new(loopback_ip, RECEIVER_PORT);
+    let msg = PING_MESSAGE.as_bytes();
+    let socket = UdpSocket::bind(sender_addr).unwrap();
+
+    loop {
+        let _ = socket.send_to(msg, receiver_addr);
+
+        // Poll shutdown event.
+        match shutdown_rx.recv_timeout(Duration::from_secs(1)) {
+            // Break the loop either upon stop or channel disconnect
+            Ok(_) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
+
+            // Continue work if no events were received within the timeout
+            Err(mpsc::RecvTimeoutError::Timeout) => (),
+        };
     }
+
+    // Tell the system that service has stopped.
+    status_handle.set_service_status(ServiceStatus {
+        service_type: SERVICE_TYPE,
+        current_state: ServiceState::Stopped,
+        controls_accepted: ServiceControlAccept::empty(),
+        exit_code: ServiceExitCode::Win32(0),
+        checkpoint: 0,
+        wait_hint: Duration::default(),
+        process_id: None,
+    })?;
+
+    Ok(())
 }
