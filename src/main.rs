@@ -1,12 +1,17 @@
+mod colors;
 mod install_service;
-mod notify_service;
+mod job;
+mod ping_service;
 mod service;
 mod uninstall_service;
 
+use crate::job::Job;
+use crate::job::JobStatus;
 use anyhow::Result;
-use clap::{Args, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 
 const SERVICE_NAME: &str = "ping_service";
+const DEFAULT_GROUP: &str = "default";
 
 #[derive(Debug, Parser)]
 #[command(name = "git")]
@@ -26,12 +31,19 @@ enum Commands {
 
 #[derive(Debug, Subcommand)]
 enum JobCommands {
-    #[command(about = "Run a job")]
-    Run { name: String },
+    #[command(about = "List jobs")]
+    List {
+        #[arg(long, short = 'g', help = "Filter by group")]
+        group: Option<String>,
+    },
+    #[command(about = "Start a job")]
+    Start { name: String },
     #[command(about = "Create a job")]
     Create {
         name: String,
-        command: String,
+        // #[arg(long, short = 'd', help = "Job description")]
+        // description: Option<String>,
+        program: String,
         #[arg(
             long,
             default_value = "false",
@@ -53,10 +65,12 @@ enum JobCommands {
             help = "Restart job on success"
         )]
         restart_on_success: bool,
-        #[arg(long, short = 'g', help = "Add job to a group")]
-        group: Option<String>,
+        #[arg(long, short = 'g', help = "Add job to a group", default_value = DEFAULT_GROUP)]
+        group: String,
         args: Vec<String>,
     },
+    #[command(about = "Delete a job")]
+    Delete { name: String },
 }
 
 #[derive(Debug, Subcommand)]
@@ -73,10 +87,15 @@ enum ServiceCommands {
     Stop,
     #[command(about = "Uninstall the service")]
     Uninstall,
+    #[command(hide = true, about = "Run the background service")]
+    Run,
+    #[command(hide = false, about = "Run the service in the foreground")]
+    RunForeground,
 }
 
 #[cfg(windows)]
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let args = Cli::parse();
 
     match args.command {
@@ -84,36 +103,50 @@ fn main() -> Result<()> {
             ServiceCommands::Install => install_service::main()?,
             ServiceCommands::Start => service::start()?,
             ServiceCommands::Status => service::show_status()?,
+            ServiceCommands::Run => ping_service::main()?,
+            ServiceCommands::RunForeground => ping_service::run_service::<true>().await?,
             ServiceCommands::Config => service::show_config()?,
             ServiceCommands::Stop => service::stop()?,
             ServiceCommands::Uninstall => uninstall_service::main()?,
         },
         Commands::Job(command) => match command {
-            JobCommands::Run { name } => {
-                let mut job = std::process::Command::new("ping")
-                    .arg("localhost")
-                    .spawn()?;
-                println!("{:?}", job.wait()?);
+            JobCommands::List { group } => {
+                Job::list(group)?;
             }
-
+            JobCommands::Start { name } => {
+                let job = Job::load(&name)?;
+                // job.run_once().await?;
+                todo!()
+            }
             JobCommands::Create {
                 name,
-                command,
+                program,
                 args,
                 restart_on_failure,
                 restart_on_success,
                 start_immediately,
                 group,
             } => {
-                println!("Creating job {}", name);
-                let mut job = std::process::Command::new(command).args(args).spawn()?;
-                if let Ok(status) = job.wait() {
-                    if status.success() {
-                        println!("Job {} created successfully", name);
-                    } else {
-                        println!("Job {} failed", name);
-                    }
+                let job = Job {
+                    name,
+                    program,
+                    args,
+                    restart_on_failure,
+                    restart_on_success,
+                    group,
+                    working_directory: std::env::current_dir()?,
+                    restart_requested: start_immediately,
+                    status: JobStatus::Stopped,
+                };
+                job.save()?;
+                if start_immediately {
+                    // job.run_once().await?;
+                    todo!()
                 }
+            }
+            JobCommands::Delete { name } => {
+                let job = Job::load(&name)?;
+                job.delete()?;
             }
         },
     }

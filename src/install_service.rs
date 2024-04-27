@@ -8,13 +8,7 @@ pub fn main() -> windows_service::Result<()> {
 
     let manager_access = ServiceManagerAccess::CONNECT | ServiceManagerAccess::CREATE_SERVICE;
     let service_manager = ServiceManager::local_computer(None::<&str>, manager_access)?;
-
-    // This example installs the service defined in `examples/ping_service.rs`.
-    // In the real world code you would set the executable path to point to your own binary
-    // that implements windows service.
-    let service_binary_path = ::std::env::current_exe()
-        .unwrap()
-        .with_file_name("ping_service.exe");
+    let service_binary_path = ::std::env::current_exe().unwrap();
 
     let service_info = ServiceInfo {
         name: OsString::from("ping_service"),
@@ -23,7 +17,7 @@ pub fn main() -> windows_service::Result<()> {
         start_type: ServiceStartType::OnDemand,
         error_control: ServiceErrorControl::Normal,
         executable_path: service_binary_path,
-        launch_arguments: vec![],
+        launch_arguments: vec![OsString::from("service")],
         dependencies: vec![],
         account_name: None, // run as System
         account_password: None,

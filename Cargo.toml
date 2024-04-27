@@ -11,9 +11,11 @@ default-run = "tend"
 [dependencies]
 anyhow = "1.0.82"
 clap = { version = "4.5.4", features = ["derive"] }
+colored = "2.1.0"
+dirs-next = "2.0.0"
+prettytable-rs = "0.10.0"
+serde = { version = "1.0.199", features = ["derive"] }
+serde_json = "1.0.116"
+tokio = { version = "1.37.0", features = ["full"] }
 windows-service = "0.7.0"
 windows-sys = "0.52.0"
-
-[[bin]]
-name = "ping_service"
-path = "src/ping_service.rs"

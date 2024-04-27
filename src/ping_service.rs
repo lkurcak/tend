@@ -1,23 +1,14 @@
-// Ping service example.
-//
-// You can install and uninstall this service using other example programs.
-// All commands mentioned below shall be executed in Command Prompt with Administrator privileges.
-//
-// Service installation: `install_service.exe`
-// Service uninstallation: `uninstall_service.exe`
-//
-// Start the service: `net start ping_service`
-// Stop the service: `net stop ping_service`
-//
-// Ping server sends a text message to local UDP port 1234 once a second.
-// You can verify that service works by running netcat, i.e: `ncat -ul 1234`.
-
+use crate::colors::TendColors;
+use crate::Job;
+use crate::JobStatus;
+use std::collections::HashMap;
 use std::io::Write;
 use std::{
     fs::File,
     io,
     time::{SystemTime, UNIX_EPOCH},
 };
+use tokio::process::Child;
 
 /// Logs a message to a specified log file.
 fn log_message(file: &mut File, message: &str) -> io::Result<()> {
@@ -31,13 +22,8 @@ fn log_message(file: &mut File, message: &str) -> io::Result<()> {
     writeln!(file, "{}: {}", timestamp, message)
 }
 
-use std::{
-    ffi::OsString,
-    fs::OpenOptions,
-    net::{IpAddr, SocketAddr, UdpSocket},
-    sync::mpsc,
-    time::Duration,
-};
+use std::{ffi::OsString, fs::OpenOptions, time::Duration};
+use tokio::sync::mpsc;
 use windows_service::{
     define_windows_service,
     service::{
@@ -72,7 +58,8 @@ define_windows_service!(ffi_service_main, my_service_main);
 // Service entry function which is called on background thread by the system with service
 // parameters. There is no stdout or stderr at this point so make sure to configure the log
 // output to file if needed.
-pub fn my_service_main(_arguments: Vec<OsString>) {
+#[tokio::main]
+pub async fn my_service_main(_arguments: Vec<OsString>) {
     // Open or create a log file
     if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("app.log") {
         // Use the log_message function to log some messages
@@ -81,92 +68,113 @@ pub fn my_service_main(_arguments: Vec<OsString>) {
         let _ = log_message(&mut file, "The service is shutting down");
     }
 
-    if let Err(_e) = run_service() {
+    if let Err(_e) = run_service::<false>().await {
         // Handle the error, by logging or something.
     }
 }
 
-pub fn run_service() -> Result<()> {
-    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("run.log") {
-        // Use the log_message function to log some messages
-        let _ = log_message(&mut file, "The service is starting up");
-        let _ = log_message(&mut file, "Performing an operation...");
-        let _ = log_message(&mut file, "The service is shutting down");
-    }
+fn do_jobs(
+    join_handles: &mut HashMap<String, tokio::task::JoinHandle<()>>,
+    cancel_handles: &mut HashMap<String, mpsc::Sender<()>>,
+) -> anyhow::Result<()> {
+    Job::iterate_jobs(|job| {
+        let (tx, rx) = mpsc::channel::<()>(1);
+        tokio::spawn(job.clone().create_repeated_process(rx));
+        cancel_handles.insert(job.name, tx);
+    })?;
+    Ok(())
+}
 
-    // Create a channel to be able to poll a stop event from the service worker loop.
-    let (shutdown_tx, shutdown_rx) = mpsc::channel();
+pub async fn run_service<const FOREGROUND: bool>() -> anyhow::Result<()> {
+    println!("Starting ping service");
+    let (shutdown_tx, shutdown_rx) = std::sync::mpsc::channel();
+    let (refresh_tx, refresh_rx) = std::sync::mpsc::channel();
 
-    // Define system service event handler that will be receiving service events.
-    let event_handler = move |control_event| -> ServiceControlHandlerResult {
-        match control_event {
-            // Notifies a service to report its current status information to the service
-            // control manager. Always return NoError even if not implemented.
-            ServiceControl::Interrogate => ServiceControlHandlerResult::NoError,
+    let mut handle = None;
 
-            // Handle stop
-            ServiceControl::Stop => {
-                shutdown_tx.send(()).unwrap();
-                ServiceControlHandlerResult::NoError
-            }
+    if !FOREGROUND {
+        let event_handler = move |control_event| -> ServiceControlHandlerResult {
+            match control_event {
+                ServiceControl::Interrogate => ServiceControlHandlerResult::NoError,
 
-            // treat the UserEvent as a stop request
-            ServiceControl::UserEvent(code) => {
-                if code.to_raw() == 130 {
+                ServiceControl::Stop => {
                     shutdown_tx.send(()).unwrap();
+                    ServiceControlHandlerResult::NoError
                 }
-                ServiceControlHandlerResult::NoError
+
+                ServiceControl::UserEvent(code) => {
+                    if code.to_raw() == crate::service::ServiceUserCodes::Refresh as u32 {
+                        refresh_tx.send(()).unwrap();
+                    }
+                    ServiceControlHandlerResult::NoError
+                }
+
+                _ => ServiceControlHandlerResult::NotImplemented,
             }
-
-            _ => ServiceControlHandlerResult::NotImplemented,
-        }
-    };
-
-    // Register system service event handler.
-    // The returned status handle should be used to report service status changes to the system.
-    let status_handle = service_control_handler::register(SERVICE_NAME, event_handler)?;
-
-    // Tell the system that service is running
-    status_handle.set_service_status(ServiceStatus {
-        service_type: SERVICE_TYPE,
-        current_state: ServiceState::Running,
-        controls_accepted: ServiceControlAccept::STOP,
-        exit_code: ServiceExitCode::Win32(0),
-        checkpoint: 0,
-        wait_hint: Duration::default(),
-        process_id: None,
-    })?;
-
-    // For demo purposes this service sends a UDP packet once a second.
-    let loopback_ip = IpAddr::from(LOOPBACK_ADDR);
-    let sender_addr = SocketAddr::new(loopback_ip, 0);
-    let receiver_addr = SocketAddr::new(loopback_ip, RECEIVER_PORT);
-    let msg = PING_MESSAGE.as_bytes();
-    let socket = UdpSocket::bind(sender_addr).unwrap();
-
-    loop {
-        let _ = socket.send_to(msg, receiver_addr);
-
-        // Poll shutdown event.
-        match shutdown_rx.recv_timeout(Duration::from_secs(1)) {
-            // Break the loop either upon stop or channel disconnect
-            Ok(_) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
-
-            // Continue work if no events were received within the timeout
-            Err(mpsc::RecvTimeoutError::Timeout) => (),
         };
+
+        let status_handle = service_control_handler::register(SERVICE_NAME, event_handler)?;
+        handle = Some(status_handle);
+
+        status_handle.set_service_status(ServiceStatus {
+            service_type: SERVICE_TYPE,
+            current_state: ServiceState::Running,
+            controls_accepted: ServiceControlAccept::STOP,
+            exit_code: ServiceExitCode::Win32(0),
+            checkpoint: 0,
+            wait_hint: Duration::default(),
+            process_id: None,
+        })?;
     }
 
-    // Tell the system that service has stopped.
-    status_handle.set_service_status(ServiceStatus {
-        service_type: SERVICE_TYPE,
-        current_state: ServiceState::Stopped,
-        controls_accepted: ServiceControlAccept::empty(),
-        exit_code: ServiceExitCode::Win32(0),
-        checkpoint: 0,
-        wait_hint: Duration::default(),
-        process_id: None,
-    })?;
+    let mut join_handles = HashMap::new();
+    let mut cancel_handles = HashMap::new();
+    do_jobs(&mut join_handles, &mut cancel_handles)?;
+
+    // loop {
+    //     match refresh_rx.recv_timeout(Duration::from_secs(1)) {
+    //         Ok(_) => {
+    //             // do_jobs(&mut cancel_handles)?;
+    //         }
+    //         Err(std::sync::mpsc::RecvTimeoutError::Timeout) => (),
+    //         Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+    //     }
+    //     match shutdown_rx.recv_timeout(Duration::from_secs(1)) {
+    //         Ok(_) | Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+    //         Err(std::sync::mpsc::RecvTimeoutError::Timeout) => (),
+    //     };
+    // }
+
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {
+            println!("Ctrl-C received, shutting down");
+        }
+    }
+
+    for (name, tx) in cancel_handles {
+        println!("Sending cancel signal to {}", name.job());
+        tx.send(()).await?;
+    }
+
+    for (name, handle) in join_handles {
+        println!("Waiting for {} to finish", name.job());
+        handle.await?;
+    }
+
+    if !FOREGROUND {
+        if let Some(status_handle) = handle {
+            // Tell the system that service has stopped.
+            status_handle.set_service_status(ServiceStatus {
+                service_type: SERVICE_TYPE,
+                current_state: ServiceState::Stopped,
+                controls_accepted: ServiceControlAccept::empty(),
+                exit_code: ServiceExitCode::Win32(0),
+                checkpoint: 0,
+                wait_hint: Duration::default(),
+                process_id: None,
+            })?;
+        }
+    }
 
     Ok(())
 }

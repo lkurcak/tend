@@ -1,7 +1,7 @@
 use std::ffi::OsStr;
 
 use windows_service::{
-    service::{Service, ServiceAccess},
+    service::{Service, ServiceAccess, UserEventCode},
     service_manager::{ServiceManager, ServiceManagerAccess},
 };
 
@@ -36,5 +36,17 @@ pub fn show_config() -> windows_service::Result<()> {
     let service = connect_to_local(ServiceAccess::QUERY_CONFIG)?;
     let config = service.query_config()?;
     println!("{:#?}", config);
+    Ok(())
+}
+
+pub enum ServiceUserCodes {
+    Refresh = 128,
+}
+
+pub fn refresh() -> windows_service::Result<()> {
+    let service = connect_to_local(ServiceAccess::USER_DEFINED_CONTROL)?;
+    let user_event_code: UserEventCode =
+        UserEventCode::from_raw(ServiceUserCodes::Refresh as u32).unwrap();
+    service.notify(user_event_code)?;
     Ok(())
 }
