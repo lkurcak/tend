@@ -1,24 +1,9 @@
-use std::{
-    path::{Path, PathBuf},
-    // process::Child,
-};
-use tokio::{
-    process::{Child, Command},
-    sync::mpsc::Receiver,
-};
-
 use crate::colors::TendColors;
 use anyhow::Result;
 use prettytable::{format, row, Table};
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum JobStatus {
-    Running,
-    Stopped,
-    Failure,
-    Success,
-}
+use std::path::PathBuf;
+use tokio::{process::Command, sync::mpsc::Receiver};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Job {
@@ -27,39 +12,55 @@ pub struct Job {
     pub program: String,
     pub args: Vec<String>,
     pub working_directory: PathBuf,
-    pub restart_requested: bool,
-    pub restart_on_failure: bool,
-    pub restart_on_success: bool,
-    pub status: JobStatus,
+    pub restart: JobRestartBehavior,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, clap::ValueEnum, Copy, PartialEq, Eq)]
+pub enum JobRestartBehavior {
+    Always,
+    OnSuccess,
+    OnFailure,
+    Never,
+}
+
+pub enum JobFilter {
+    All,
+    Job { job: String },
+    Group { group: String },
 }
 
 impl Job {
-    pub fn save(&self) -> Result<()> {
+    fn jobs_dir() -> Result<PathBuf> {
         let home = dirs_next::home_dir().ok_or(anyhow::anyhow!("Could not find home directory"))?;
-        let commands = home.join(".tend").join("commands");
-        std::fs::create_dir_all(&commands)?;
+        let jobs = home.join(".tend").join("jobs");
+        std::fs::create_dir_all(&jobs)?;
+        Ok(jobs)
+    }
 
-        let file = std::fs::File::create(commands.join(&self.name))?;
+    pub fn save(&self, overwrite: bool) -> Result<()> {
+        let jobs = Self::jobs_dir()?;
+        let file = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(overwrite)
+            .create_new(!overwrite)
+            .open(jobs.join(&self.name))?;
         serde_json::to_writer(file, self)?;
 
         Ok(())
     }
 
     pub fn load(name: &str) -> Result<Self> {
-        let home = dirs_next::home_dir().ok_or(anyhow::anyhow!("Could not find home directory"))?;
-        let commands = home.join(".tend").join("commands");
-
-        let file = std::fs::File::open(commands.join(name))?;
+        let jobs = Self::jobs_dir()?;
+        let file = std::fs::File::open(jobs.join(name))?;
         let job: Job = serde_json::from_reader(file)?;
 
         Ok(job)
     }
 
     pub fn delete(&self) -> Result<()> {
-        let home = dirs_next::home_dir().ok_or(anyhow::anyhow!("Could not find home directory"))?;
-        let commands = home.join(".tend").join("commands");
-
-        std::fs::remove_file(commands.join(&self.name))?;
+        let jobs = Self::jobs_dir()?;
+        std::fs::remove_file(jobs.join(&self.name))?;
 
         Ok(())
     }
@@ -68,10 +69,8 @@ impl Job {
     where
         F: FnMut(Job),
     {
-        let home = dirs_next::home_dir().ok_or(anyhow::anyhow!("Could not find home directory"))?;
-        let commands = home.join(".tend").join("commands");
-
-        for entry in std::fs::read_dir(commands)? {
+        let jobs = Self::jobs_dir()?;
+        for entry in std::fs::read_dir(jobs)? {
             let entry = entry?;
             let path = entry.path();
             if path.is_file() {
@@ -84,9 +83,7 @@ impl Job {
     }
 
     pub fn list(group: Option<String>) -> Result<()> {
-        let home = dirs_next::home_dir().ok_or(anyhow::anyhow!("Could not find home directory"))?;
-        let commands = home.join(".tend").join("commands");
-
+        let jobs = Self::jobs_dir()?;
         let mut table = Table::new();
         table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
         //table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
@@ -96,12 +93,11 @@ impl Job {
             "Program",
             "Args",
             "Working Directory",
-            "Restart on Failure",
-            "Restart on Success",
+            "Restart",
             "Group"
         ]);
 
-        for entry in std::fs::read_dir(commands)? {
+        for entry in std::fs::read_dir(jobs)? {
             let entry = entry?;
             let path = entry.path();
             if path.is_file() {
@@ -111,13 +107,13 @@ impl Job {
                         continue;
                     }
                 }
+
                 table.add_row(row![
                     job.name.job(),
                     job.program.program(),
                     job.args.join(" "),
                     job.working_directory.display(),
-                    job.restart_on_failure,
-                    job.restart_on_success,
+                    job.restart_behaviour(),
                     job.group,
                 ]);
             }
@@ -140,11 +136,6 @@ impl Job {
         command.args(&self.args);
         command
     }
-    pub fn create_oneshot_process(&self) -> Result<Child> {
-        let mut command = self.create_command();
-        let child = command.spawn()?;
-        Ok(child)
-    }
 
     pub async fn create_repeated_process(self, mut rx: Receiver<()>) -> Result<()> {
         let mut command = self.create_command();
@@ -161,7 +152,7 @@ impl Job {
                                     self.name.job(),
                                     "success".success()
                                 );
-                                if self.restart_on_success {
+                                if self.restart_on_success() {
                                     println!("{} restarting", self.name.job());
                                 } else {
                                     println!("{} stopping", self.name.job());
@@ -173,7 +164,7 @@ impl Job {
                                     self.name.job(),
                                     "failure".failure()
                                 );
-                                if self.restart_on_failure {
+                                if self.restart_on_failure() {
                                     println!("{} restarting", self.name.job());
                                 } else {
                                     println!("{} stopping", self.name.job());
@@ -191,7 +182,7 @@ impl Job {
                     }
                 }
                 _ = rx.recv() => {
-                    println!("killing process of {}", self.name.job());
+                    // println!("killing process of {}", self.name.job());
                     process.kill().await?;
                     break;
                 }
@@ -200,25 +191,29 @@ impl Job {
 
         Ok(())
     }
+}
 
-    #[cfg(disabled)]
-    pub async fn run_once(&self) -> Result<()> {
-        let mut process = self.create_oneshot_process()?;
-        if let Ok(status) = process.wait().await {
-            if status.success() {
-                println!(
-                    "{} process finished indicating {}",
-                    self.name.job(),
-                    "success".success()
-                );
-            } else {
-                println!(
-                    "{} process finished indicating {}",
-                    self.name.job(),
-                    "failure".failure()
-                );
-            }
+impl Job {
+    pub fn restart_on_success(&self) -> bool {
+        match self.restart {
+            JobRestartBehavior::Always | JobRestartBehavior::OnSuccess => true,
+            JobRestartBehavior::OnFailure | JobRestartBehavior::Never => false,
         }
-        Ok(())
+    }
+
+    pub fn restart_on_failure(&self) -> bool {
+        match self.restart {
+            JobRestartBehavior::Always | JobRestartBehavior::OnFailure => true,
+            JobRestartBehavior::OnSuccess | JobRestartBehavior::Never => false,
+        }
+    }
+
+    pub fn restart_behaviour(&self) -> &'static str {
+        match self.restart {
+            JobRestartBehavior::Always => "always",
+            JobRestartBehavior::OnSuccess => "on success",
+            JobRestartBehavior::OnFailure => "on failure",
+            JobRestartBehavior::Never => "never",
+        }
     }
 }
