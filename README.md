@@ -47,11 +47,11 @@ tend create hello ping 8.8.8.8 --restart=always --overwrite
 >
 > For example, you could write this on Linux:
 > ```sh
-> tend create print sh -c 'echo It is $(date)'
+> tend create time sh -- -c 'echo Time: $(date)'
 > ```
 > to achieve something similar as this on Windows:
 > ```sh
-> tend create print cmd /C echo It is "%"TIME"%"
+> tend create time cmd -- /C 'echo Time: %TIME%'
 > ```
 
 #### Groups
