@@ -8,7 +8,6 @@ use crate::job::{Job, JobFilter};
 use anyhow::Result;
 use clap::Parser;
 
-#[cfg(windows)]
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = args::Cli::parse();
