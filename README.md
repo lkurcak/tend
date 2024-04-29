@@ -58,10 +58,10 @@ tend create hello ping 8.8.8.8 --restart=always --overwrite
 
 Create a job as a part of a group:
 ```sh
-tend create postgres --group dev kubectl port-forward svc/postgres 5432:5432
+tend create dev-pg --group=dev kubectl port-forward svc/postgres 5432:5432
 ```
 
-Concurrently start all jobs from a specific group:
+Start all jobs from a specific group:
 ```sh
 tend run --group dev
 ```
