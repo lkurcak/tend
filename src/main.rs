@@ -24,7 +24,7 @@ async fn main() -> Result<()> {
             } else {
                 JobFilter::All
             };
-            run::run(filter).await?;
+            run::run(filter, args.verbose).await?;
         }
         args::Commands::Create {
             name,

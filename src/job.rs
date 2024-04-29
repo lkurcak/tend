@@ -138,7 +138,11 @@ impl Job {
         command
     }
 
-    pub async fn create_repeated_process(self, mut rx: Receiver<()>) -> Result<()> {
+    pub async fn create_repeated_process(self, mut rx: Receiver<()>, verbose: bool) -> Result<()> {
+        if verbose {
+            println!("{} starting", self.name.job(),);
+        }
+
         let mut command = self.create_command();
 
         loop {

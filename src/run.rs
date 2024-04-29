@@ -2,7 +2,7 @@ use crate::{job::JobFilter, Job};
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 
-pub async fn run(start_args: JobFilter) -> anyhow::Result<()> {
+pub async fn run(start_args: JobFilter, verbose: bool) -> anyhow::Result<()> {
     let mut join_handles = HashMap::new();
     let mut cancel_handles = HashMap::new();
 
@@ -26,7 +26,7 @@ pub async fn run(start_args: JobFilter) -> anyhow::Result<()> {
         count += 1;
 
         let (tx, rx) = mpsc::channel::<()>(1);
-        let handle = tokio::spawn(job.clone().create_repeated_process(rx));
+        let handle = tokio::spawn(job.clone().create_repeated_process(rx, verbose));
         cancel_handles.insert(job.name.clone(), tx);
         join_handles.insert(job.name.clone(), handle);
     })?;

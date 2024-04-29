@@ -11,16 +11,19 @@ use crate::job::JobRestartBehavior;
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
+
+    #[arg(long, short, help = "Print extra information")]
+    pub verbose: bool,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    #[command(about = "List jobs")]
+    #[command(alias = "l", about = "List jobs")]
     List {
         #[arg(long, short = 'g', help = "Filter by group")]
         group: Option<String>,
     },
-    #[command(about = "Launch jobs. Use --group or --job to filter.")]
+    #[command(alias = "r", about = "Launch jobs. Use --group or --job to filter.")]
     Run {
         #[arg(short, long, help = "Start all jobs", exclusive = true)]
         all: bool,
@@ -35,7 +38,7 @@ pub enum Commands {
         job: Option<String>,
     },
     // Start(StartArgs),
-    #[command(about = "Create a job")]
+    #[command(alias = "c", about = "Create a job")]
     Create {
         #[arg(help = "Name of the job. Must be unique.")]
         name: String,
@@ -60,6 +63,6 @@ pub enum Commands {
         #[arg(help = "Use -- to separate program arguments from job arguments.")]
         args: Vec<String>,
     },
-    #[command(about = "Delete a job")]
+    #[command(alias = "d", about = "Delete a job")]
     Delete { name: String },
 }
