@@ -16,7 +16,7 @@ async fn main() -> Result<()> {
         args::Commands::List { group } => {
             Job::list(group)?;
         }
-        args::Commands::Start { group, job } => {
+        args::Commands::Run { group, job, all: _ } => {
             let filter: JobFilter = if let Some(group) = group {
                 JobFilter::Group { group }
             } else if let Some(job) = job {

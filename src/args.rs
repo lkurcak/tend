@@ -21,7 +21,9 @@ pub enum Commands {
         group: Option<String>,
     },
     #[command(about = "Launch jobs. Use --group or --job to filter.")]
-    Start {
+    Run {
+        #[arg(short, long, help = "Start all jobs", exclusive = true)]
+        all: bool,
         #[arg(
             short,
             long,

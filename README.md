@@ -17,7 +17,7 @@ tend create hello ping 8.8.8.8
 
 Run all jobs:
 ```sh
-tend start
+tend run
 ```
 
 Press `Ctrl-C` to cancel all jobs and exit the program.
@@ -58,9 +58,11 @@ tend create hello ping 8.8.8.8 --restart=always --overwrite
 
 Create a job as a part of a group:
 ```sh
-tend create 
+tend create postgres --group dev kubectl port-forward svc/postgres 5432:5432
+```
 
 Concurrently start all jobs from a specific group:
 ```sh
-tend start --group=dev-cluster
+tend run --group dev
 ```
+
