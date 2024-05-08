@@ -125,7 +125,10 @@ jobs:
           fi
           echo "BIN=$bin" >> $GITHUB_ENV
 
-      - name: Strip release binary (macos)
-        if: matrix.os == 'macos-latest'
+      - name: Upload release archive
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
-        run: strip "$BIN"
+        run: |
+          version="${{ needs.create-release.outputs.version }}"
+          gh release upload "$version" $BIN
