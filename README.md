@@ -1,8 +1,13 @@
 # tend
 
+[![Build status](https://github.com/lubomirkurcak/tend/workflows/release/badge.svg)](https://github.com/lubomirkurcak/tend/actions)
+[![Crates.io](https://img.shields.io/crates/v/tend.svg)](https://crates.io/crates/tend)
+
 ### Installation
 
-If you have cargo installed you can simply:
+**[Download latest release](https://github.com/lubomirkurcak/tend/releases/latest)** if you are using **Windows**, **macOS** or **Linux**.
+
+If you have `cargo` you can install `tend` with it:
 ```sh
 cargo install tend
 ```
