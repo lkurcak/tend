@@ -31,12 +31,6 @@ jobs:
             echo "version does not match Cargo.toml" >&2
             exit 1
           fi
-      - name: Print GitHub Token
-        run: |
-          echo "Test"
-          echo "GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}"
-          echo "GH_TOKEN: ${{ secrets.GH_TOKEN }}"
-          echo "Test over"
       - name: Create GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -125,10 +119,42 @@ jobs:
           fi
           echo "BIN=$bin" >> $GITHUB_ENV
 
+      - name: Determine archive name
+        shell: bash
+        run: |
+          version="${{ needs.create-release.outputs.version }}"
+          echo "ARCHIVE=tend-$version-${{ matrix.target }}" >> $GITHUB_ENV
+
+      - name: Creating directory for archive
+        shell: bash
+        run: |
+          mkdir -p "$ARCHIVE"/{complete,doc}
+          cp "$BIN" "$ARCHIVE"/
+          cp {README.md,COPYING,UNLICENSE,LICENSE-MIT} "$ARCHIVE"/
+          cp {CHANGELOG.md,FAQ.md,GUIDE.md} "$ARCHIVE"/doc/
+
+      - name: Build archive (Windows)
+        shell: bash
+        if: matrix.os == 'windows-latest'
+        run: |
+          7z a "$ARCHIVE.zip" "$ARCHIVE"
+          certutil -hashfile "$ARCHIVE.zip" SHA256 > "$ARCHIVE.zip.sha256"
+          echo "ASSET=$ARCHIVE.zip" >> $GITHUB_ENV
+          echo "ASSET_SUM=$ARCHIVE.zip.sha256" >> $GITHUB_ENV
+
+      - name: Build archive (Unix)
+        shell: bash
+        if: matrix.os != 'windows-latest'
+        run: |
+          tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+          shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
+          echo "ASSET=$ARCHIVE.tar.gz" >> $GITHUB_ENV
+          echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" >> $GITHUB_ENV
+
       - name: Upload release archive
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           version="${{ needs.create-release.outputs.version }}"
-          gh release upload "$version" $BIN
+          gh release upload "$version" ${{ env.ASSET }} ${{ env.ASSET_SUM }}
