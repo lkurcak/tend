@@ -1,8 +1,5 @@
 name: release
 
-permissions:
-  contents: write
-
 on:
   push:
     tags:
@@ -15,6 +12,9 @@ jobs:
   create-release:
     name: create-release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
       - uses: actions/checkout@v4
       - name: Get the release version from the tag
