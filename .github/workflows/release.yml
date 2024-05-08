@@ -119,9 +119,9 @@ jobs:
         run: |
           cargo build --verbose --release
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            bin="target/${{ matrix.target }}/release/tend.exe"
+            bin="target/release/tend.exe"
           else
-            bin="target/${{ matrix.target }}/release/tend"
+            bin="target/release/tend"
           fi
           echo "BIN=$bin" >> $GITHUB_ENV
 
