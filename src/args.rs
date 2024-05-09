@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-use crate::job::JobRestartBehavior;
+use crate::job::{JobRestartBehavior, JobRestartStrategy};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -51,6 +51,8 @@ pub enum Commands {
             help = "Restart condition"
         )]
         restart: JobRestartBehavior,
+        #[arg(long, default_value = "exponential-backoff", help = "Restart strategy")]
+        restart_strategy: JobRestartStrategy,
         #[arg(long, short = 'w', help = "Overwrite existing job with the same name")]
         overwrite: bool,
         #[arg(
