@@ -33,6 +33,7 @@ async fn main() -> Result<()> {
             restart,
             group,
             overwrite,
+            restart_strategy,
         } => {
             let job = Job {
                 name,
@@ -41,6 +42,7 @@ async fn main() -> Result<()> {
                 restart,
                 group,
                 working_directory: std::env::current_dir()?,
+                restart_strategy,
             };
             let res = job.save(overwrite);
             if let Err(ref error) = res {

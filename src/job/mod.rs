@@ -1,5 +1,6 @@
 use crate::colors::TendColors;
 use anyhow::Result;
+use folktime::Folktime;
 use prettytable::{format, row, Table};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -13,14 +14,36 @@ pub struct Job {
     pub args: Vec<String>,
     pub working_directory: PathBuf,
     pub restart: JobRestartBehavior,
+    #[serde(default)]
+    pub restart_strategy: JobRestartStrategy,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, clap::ValueEnum, Copy, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, clap::ValueEnum, Copy, PartialEq, Eq)]
 pub enum JobRestartBehavior {
     Always,
     OnSuccess,
+    #[default]
     OnFailure,
     Never,
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize, clap::ValueEnum, Copy, PartialEq)]
+pub enum JobRestartStrategy {
+    Immediate,
+    #[default]
+    ExponentialBackoff,
+}
+
+impl JobRestartStrategy {
+    pub fn delay_seconds(&self, restarts: u64) -> u64 {
+        match self {
+            JobRestartStrategy::Immediate => 0,
+            JobRestartStrategy::ExponentialBackoff => [0, 0, 0, 1, 2, 4, 8, 15, 30]
+                .get(restarts as usize)
+                .copied()
+                .unwrap_or(60),
+        }
+    }
 }
 
 pub enum JobFilter {
@@ -139,38 +162,56 @@ impl Job {
     }
 
     pub async fn create_repeated_process(self, mut rx: Receiver<()>, verbose: bool) -> Result<()> {
-        if verbose {
-            println!("{} starting", self.name.job(),);
-        }
-
         let mut command = self.create_command();
 
+        let mut successes = 0;
+        let mut failures = 0;
+
         loop {
+            if verbose {
+                println!("{} starting", self.name.job(),);
+            }
+            let start_time = std::time::Instant::now();
             let mut process = command.spawn()?;
+
             tokio::select! {
                 a = process.wait() => {
+                    let end_time = std::time::Instant::now();
+                    let job_duration = end_time.duration_since(start_time);
                     match a {
                         Ok(status) => {
                             if status.success() {
+                                successes += 1;
                                 println!(
-                                    "{} process finished indicating {}",
+                                    "{} process finished indicating {} after running for {}",
                                     self.name.job(),
-                                    "success".success()
+                                    "success".success(),
+                                    Folktime::duration(job_duration).to_string().time_value(),
                                 );
                                 if self.restart_on_success() {
-                                    println!("{} restarting", self.name.job());
+                                    let delay_seconds = self.restart_strategy.delay_seconds(successes);
+                                    if delay_seconds != 0 {
+                                        println!("{} restarting in {} seconds", self.name.job(), delay_seconds);
+                                        tokio::time::sleep(tokio::time::Duration::from_secs(delay_seconds)).await;
+                                    }
                                 } else {
                                     println!("{} stopping", self.name.job());
                                     break;
                                 }
                             } else {
+                                failures += 1;
                                 println!(
-                                    "{} process finished indicating {}",
+                                    "{} process finished indicating {} after running for {}",
                                     self.name.job(),
-                                    "failure".failure()
+                                    "failure".failure(),
+                                    Folktime::duration(job_duration).to_string().time_value(),
                                 );
                                 if self.restart_on_failure() {
-                                    println!("{} restarting", self.name.job());
+                                    let delay_seconds = self.restart_strategy.delay_seconds(failures);
+                                    if delay_seconds != 0 {
+                                        println!("{} restarting in {} seconds", self.name.job(), delay_seconds);
+                                        tokio::time::sleep(tokio::time::Duration::from_secs(delay_seconds)).await;
+                                    }
                                 } else {
                                     println!("{} stopping", self.name.job());
                                     break;
