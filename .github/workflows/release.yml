@@ -47,54 +47,33 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - build: linux
-          os: ubuntu-latest
-          rust: nightly
-          target: x86_64-unknown-linux-musl
-        - build: stable-x86
-          os: ubuntu-latest
-          rust: stable
-          target: i686-unknown-linux-gnu
-        - build: stable-aarch64
-          os: ubuntu-latest
-          rust: stable
-          target: aarch64-unknown-linux-gnu
-        - build: stable-arm-gnueabihf
-          os: ubuntu-latest
-          rust: stable
-          target: armv7-unknown-linux-gnueabihf
-        - build: stable-arm-musleabihf
-          os: ubuntu-latest
-          rust: stable
-          target: armv7-unknown-linux-musleabihf
-        - build: stable-arm-musleabi
-          os: ubuntu-latest
-          rust: stable
-          target: armv7-unknown-linux-musleabi
-        - build: stable-powerpc64
-          os: ubuntu-latest
-          rust: stable
-          target: powerpc64-unknown-linux-gnu
-        - build: stable-s390x
-          os: ubuntu-latest
-          rust: stable
-          target: s390x-unknown-linux-gnu
-        - build: macos
+        - target: aarch64-apple-darwin
           os: macos-latest
-          rust: nightly
-          target: x86_64-apple-darwin
-        - build: win-msvc
+          rustflags: ''
+        - target: x86_64-apple-darwin
+          os: macos-latest
+          rustflags: ''
+        - target: aarch64-pc-windows-msvc
           os: windows-latest
-          rust: nightly
-          target: x86_64-pc-windows-msvc
-        - build: win-gnu
+          rustflags: '-C target-feature=+crt-static'
+        - target: x86_64-pc-windows-msvc
           os: windows-latest
-          rust: nightly-x86_64-gnu
-          target: x86_64-pc-windows-gnu
-        - build: win32-msvc
-          os: windows-latest
-          rust: nightly
-          target: i686-pc-windows-msvc
+          rustflags: '-C target-feature=+crt-static'
+        - target: aarch64-unknown-linux-gnu
+          os: ubuntu-latest
+          rustflags: ''
+        - target: x86_64-unknown-linux-gnu
+          os: ubuntu-latest
+          rustflags: ''
+        - target: x86_64-unknown-linux-musl
+          os: ubuntu-latest
+          rustflags: ''
+        - target: armv7-unknown-linux-gnueabihf
+          os: ubuntu-latest
+          rustflags: ''
+        - target: riscv64gc-unknown-linux-gnu
+          os: ubuntu-latest
+          rustflags: ''
 
     runs-on: ${{ matrix.os }}
 
@@ -105,11 +84,14 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ matrix.rust }}
+          toolchain: stable
           target: ${{ matrix.target }}
 
       - name: Build release binary
         shell: bash
+        env:
+          RUSTFLAGS: ${{ matrix.rustflags }}
+
         run: |
           cargo build --verbose --release
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
@@ -130,6 +112,7 @@ jobs:
         run: |
           mkdir -p "$ARCHIVE"/
           cp "$BIN" "$ARCHIVE"/
+          cp {README.md,LICENSE-MIT,LICENSE-APACHE} "$ARCHIVE"/
 
       - name: Build archive (Windows)
         shell: bash
@@ -155,4 +138,5 @@ jobs:
         shell: bash
         run: |
           version="${{ needs.create-release.outputs.version }}"
-          gh release upload "$version" ${{ env.ASSET }} ${{ env.ASSET_SUM }}
+          #gh release upload "$version" ${{ env.ASSET }} ${{ env.ASSET_SUM }}
+          gh release upload "$version" ${{ env.ASSET }}
