@@ -2,7 +2,7 @@
 authors = ["Ľubomír Kurčák <lubomirkurcak@gmail.com>"]
 name = "tend"
 description = "Quickly spin up/down groups of command-line tasks with automated recovery"
-version = "0.2.8"
+version = "0.0.9"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/lubomirkurcak/tend"
@@ -15,13 +15,13 @@ categories = [
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.82"
+anyhow = "1.0.83"
 chrono = { version = "0.4.38", features = ["serde", "rkyv-32"] }
 clap = { version = "4.5.4", features = ["derive"] }
 colored = "2.1.0"
 dirs-next = "2.0.0"
 folktime = "0.2.1"
 prettytable-rs = "0.10.0"
-serde = { version = "1.0.199", features = ["derive"] }
-serde_json = "1.0.116"
+serde = { version = "1.0.201", features = ["derive"] }
+serde_json = "1.0.117"
 tokio = { version = "1.37.0", features = ["full"] }
