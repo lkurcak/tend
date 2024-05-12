@@ -66,5 +66,34 @@ pub enum Commands {
         args: Vec<String>,
     },
     #[command(alias = "d", about = "Delete a job")]
-    Delete { name: String },
+    #[clap(group(clap::ArgGroup::new("input").required(true).args(&["name", "group", "all"])))]
+    Delete {
+        #[arg(
+            help = "Name of the job to delete",
+            conflicts_with = "all",
+            conflicts_with = "group",
+            group = "input"
+        )]
+        name: Option<String>,
+        #[arg(
+            short,
+            long,
+            help = "Delete all jobs from a group",
+            conflicts_with = "name",
+            conflicts_with = "all",
+            group = "input"
+        )]
+        group: Option<String>,
+        #[arg(
+            short,
+            long,
+            help = "Delete all jobs",
+            conflicts_with = "name",
+            conflicts_with = "group",
+            group = "input"
+        )]
+        all: bool,
+        #[arg(short, long, help = "Confirm delete action")]
+        confirm: bool,
+    },
 }
