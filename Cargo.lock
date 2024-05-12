@@ -271,9 +271,9 @@ checksum = "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
 
 [[package]]
 name = "folktime"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6f847e9ea8d2c9c35ca8fdc68b125f81a81203eaca9fc2ffbd4e5f4e233e1ef"
+checksum = "62f14fea54ab6277c8628ceca8effb100d22d101e7b0b4a39779ab861d71dbf9"
 
 [[package]]
 name = "getrandom"
@@ -690,7 +690,7 @@ dependencies = [
 
 [[package]]
 name = "tend"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "anyhow",
  "chrono",

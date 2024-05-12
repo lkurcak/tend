@@ -4,7 +4,11 @@ use folktime::Folktime;
 use prettytable::{format, row, Table};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use tokio::{process::Command, sync::mpsc::Receiver};
+use tokio::{
+    io::{AsyncBufReadExt, BufReader},
+    process::Command,
+    sync::mpsc::Receiver,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Job {
@@ -167,71 +171,105 @@ impl Job {
         let mut successes = 0;
         let mut failures = 0;
 
-        loop {
+        'job: loop {
             if verbose {
                 println!("{} starting", self.name.job(),);
             }
             let start_time = std::time::Instant::now();
-            let mut process = command.spawn()?;
+            let mut process = command
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped())
+                .spawn()?;
 
-            tokio::select! {
-                a = process.wait() => {
-                    let end_time = std::time::Instant::now();
-                    let job_duration = end_time.duration_since(start_time);
-                    match a {
-                        Ok(status) => {
-                            if status.success() {
-                                successes += 1;
-                                println!(
-                                    "{} process finished indicating {} after running for {}",
-                                    self.name.job(),
-                                    "success".success(),
-                                    Folktime::duration(job_duration).to_string().time_value(),
-                                );
-                                if self.restart_on_success() {
-                                    let delay_seconds = self.restart_strategy.delay_seconds(successes);
-                                    if delay_seconds != 0 {
-                                        println!("{} restarting in {} seconds", self.name.job(), delay_seconds);
-                                        tokio::time::sleep(tokio::time::Duration::from_secs(delay_seconds)).await;
+            let mut stdout = BufReader::new(
+                process
+                    .stdout
+                    .take()
+                    .ok_or(anyhow::anyhow!("Could not get stdout"))?,
+            )
+            .lines();
+
+            let mut stderr = BufReader::new(
+                process
+                    .stderr
+                    .take()
+                    .ok_or(anyhow::anyhow!("Could not get stderr"))?,
+            )
+            .lines();
+
+            'process: loop {
+                tokio::select! {
+                    stdout_line = stdout.next_line() => {
+                        if let Some(line) = stdout_line? {
+                            println!("{}{}", format!("{}: ", self.name).job(), line);
+                        }
+                        continue 'process;
+                    }
+                    stderr_line = stderr.next_line() => {
+                        if let Some(line) = stderr_line? {
+                            println!("{}{}{}{}", self.name.job(), " (stderr)".failure(), ": ".job(), line);
+                        }
+                        continue 'process;
+                    }
+                    a = process.wait() => {
+                        let end_time = std::time::Instant::now();
+                        let job_duration = end_time.duration_since(start_time);
+                        match a {
+                            Ok(status) => {
+                                if status.success() {
+                                    successes += 1;
+                                    println!(
+                                        "{} process finished indicating {} after running for {}",
+                                        self.name.job(),
+                                        "success".success(),
+                                        Folktime::duration(job_duration).to_string().time_value(),
+                                    );
+                                    if self.restart_on_success() {
+                                        let delay_seconds = self.restart_strategy.delay_seconds(successes);
+                                        if delay_seconds != 0 {
+                                            println!("{} restarting in {} seconds", self.name.job(), delay_seconds);
+                                            tokio::time::sleep(tokio::time::Duration::from_secs(delay_seconds)).await;
+                                        }
+                                    } else {
+                                        println!("{} stopping", self.name.job());
+                                        break 'job;
                                     }
                                 } else {
-                                    println!("{} stopping", self.name.job());
-                                    break;
-                                }
-                            } else {
-                                failures += 1;
-                                println!(
-                                    "{} process finished indicating {} after running for {}",
-                                    self.name.job(),
-                                    "failure".failure(),
-                                    Folktime::duration(job_duration).to_string().time_value(),
-                                );
-                                if self.restart_on_failure() {
-                                    let delay_seconds = self.restart_strategy.delay_seconds(failures);
-                                    if delay_seconds != 0 {
-                                        println!("{} restarting in {} seconds", self.name.job(), delay_seconds);
-                                        tokio::time::sleep(tokio::time::Duration::from_secs(delay_seconds)).await;
+                                    failures += 1;
+                                    println!(
+                                        "{} process finished indicating {} after running for {}",
+                                        self.name.job(),
+                                        "failure".failure(),
+                                        Folktime::duration(job_duration).to_string().time_value(),
+                                    );
+                                    if self.restart_on_failure() {
+                                        let delay_seconds = self.restart_strategy.delay_seconds(failures);
+                                        if delay_seconds != 0 {
+                                            println!("{} restarting in {} seconds", self.name.job(), delay_seconds);
+                                            tokio::time::sleep(tokio::time::Duration::from_secs(delay_seconds)).await;
+                                        }
+                                    } else {
+                                        println!("{} stopping", self.name.job());
+                                        break 'job;
                                     }
-                                } else {
-                                    println!("{} stopping", self.name.job());
-                                    break;
                                 }
                             }
-                        }
-                        Err(e) => {
-                            println!(
-                                "{} could not be awaited ({:?})",
-                                self.name.job(),
-                                e.to_string().failure()
-                            );
+                            Err(e) => {
+                                println!(
+                                    "{} could not be awaited ({:?})",
+                                    self.name.job(),
+                                    e.to_string().failure()
+                                );
+                            }
                         }
                     }
+                    _ = rx.recv() => {
+                        // println!("killing process of {}", self.name.job());
+                        process.kill().await?;
+                        break 'job;
+                    }
                 }
-                _ = rx.recv() => {
-                    // println!("killing process of {}", self.name.job());
-                    process.kill().await?;
-                    break;
-                }
+                break 'process;
             }
         }
 
