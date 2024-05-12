@@ -58,9 +58,35 @@ async fn main() -> Result<()> {
             }
             res?;
         }
-        args::Commands::Delete { name } => {
-            let job = Job::load(&name)?;
-            job.delete()?;
+        args::Commands::Delete {
+            name,
+            group,
+            all,
+            confirm,
+        } => {
+            if let Some(name) = name {
+                let job = Job::load(&name)?;
+                job.delete()?;
+            }
+            if let Some(group) = group {
+                Job::iterate_jobs(|job| {
+                    if job.group == group {
+                        let _ = job.delete();
+                    }
+                })?;
+            }
+            if all {
+                if confirm {
+                    Job::iterate_jobs(|job| {
+                        let _ = job.delete();
+                    })?;
+                } else {
+                    eprintln!(
+                        "{}",
+                        "Use --confirm to delete all jobs. This cannot be undone.".failure()
+                    );
+                }
+            }
         }
     }
 
