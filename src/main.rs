@@ -12,6 +12,10 @@ use clap::Parser;
 async fn main() -> Result<()> {
     let args = args::Cli::parse();
 
+    if args.no_color {
+        colored::control::set_override(false);
+    }
+
     match args.command {
         args::Commands::List { group } => {
             Job::list(group)?;

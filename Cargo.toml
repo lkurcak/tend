@@ -2,7 +2,7 @@
 authors = ["Ľubomír Kurčák <lubomirkurcak@gmail.com>"]
 name = "tend"
 description = "Quickly spin up/down groups of command-line tasks with automated recovery"
-version = "0.0.9"
+version = "0.2.9"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/lubomirkurcak/tend"
@@ -16,7 +16,6 @@ categories = [
 
 [dependencies]
 anyhow = "1.0.83"
-chrono = { version = "0.4.38", features = ["serde", "rkyv-32"] }
 clap = { version = "4.5.4", features = ["derive"] }
 colored = "2.1.0"
 dirs-next = "2.0.0"

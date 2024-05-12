@@ -14,6 +14,9 @@ pub struct Cli {
 
     #[arg(long, short, help = "Print extra information")]
     pub verbose: bool,
+
+    #[arg(long, help = "Disable color output")]
+    pub no_color: bool,
 }
 
 #[derive(Debug, Subcommand)]
