@@ -51,9 +51,14 @@ impl JobRestartStrategy {
 }
 
 pub enum JobFilter {
-    All,
-    Job { job: String },
-    Group { group: String },
+    All {
+        except: Vec<String>,
+    },
+    Subset {
+        jobs: Vec<String>,
+        groups: Vec<String>,
+        except: Vec<String>,
+    },
 }
 
 impl Job {

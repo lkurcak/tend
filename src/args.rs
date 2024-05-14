@@ -26,19 +26,22 @@ pub enum Commands {
         #[arg(long, short = 'g', help = "Filter by group")]
         group: Option<String>,
     },
-    #[command(alias = "r", about = "Launch jobs. Use --group or --job to filter.")]
+    #[command(alias = "r", about = "Launch jobs. Use --job --group and --except to filter.")]
     Run {
         #[arg(short, long, help = "Start all jobs", exclusive = true)]
         all: bool,
         #[arg(
             short,
             long,
-            exclusive = true,
-            help = "Start jobs from a specific group"
+            help = "Start jobs from specific group(s)",
+            num_args = 1..,
+            use_value_delimiter = true
         )]
-        group: Option<String>,
-        #[arg(short, long, exclusive = true, help = "Start a specific job")]
-        job: Option<String>,
+        group: Vec<String>,
+        #[arg(short, long, help = "Start specific job(s)", num_args = 1.., use_value_delimiter = true)]
+        job: Vec<String>,
+        #[arg(short, long, help = "Exclude specific job(s)", num_args = 1.., use_value_delimiter = true)]
+        except: Vec<String>,
     },
     // Start(StartArgs),
     #[command(alias = "c", about = "Create a job")]
@@ -67,6 +70,14 @@ pub enum Commands {
         group: String,
         #[arg(help = "Use -- to separate program arguments from job arguments.")]
         args: Vec<String>,
+    },
+    Show {
+        #[arg(help = "Name of the job to show")]
+        name: String,
+        #[arg(long, help = "Print job creation command")]
+        create: bool,
+        #[arg(long, help = "Print job execution command")]
+        command: bool,
     },
     #[command(alias = "d", about = "Delete a job")]
     #[clap(group(clap::ArgGroup::new("input").required(true).args(&["name", "group", "all"])))]
