@@ -17,22 +17,39 @@ async fn main() -> Result<()> {
     }
 
     match args.command {
-        args::Commands::List { group } => {
-            Job::list(group)?;
-        }
-        args::Commands::Run {
+        args::Commands::List {
+            // name,
+            all: _,
             group,
             job,
-            all: _,
-            except,
+            exclude,
         } => {
             let filter = if group.is_empty() && job.is_empty() {
-                JobFilter::All { except }
+                JobFilter::All { exclude }
             } else {
                 JobFilter::Subset {
                     groups: group,
                     jobs: job,
-                    except,
+                    exclude,
+                }
+            };
+
+            Job::list(filter)?;
+        }
+        args::Commands::Run {
+            // name,
+            group,
+            job,
+            all: _,
+            exclude,
+        } => {
+            let filter = if group.is_empty() && job.is_empty() {
+                JobFilter::All { exclude }
+            } else {
+                JobFilter::Subset {
+                    groups: group,
+                    jobs: job,
+                    exclude,
                 }
             };
 
@@ -70,46 +87,36 @@ async fn main() -> Result<()> {
             }
             res?;
         }
-        args::Commands::Show { create, command, name } => {
-            if create {
-                let job = Job::load(&name)?;
-                println!("tend create {} {} -- {}", job.name, job.program, job.args.join(" "));
-            } else if command {
-                let job = Job::load(&name)?;
-                println!("{} {}", job.program, job.args.join(" "));
-            } else {
-                let job = Job::load(&name)?;
-                println!("{:#?}", job);
-            }
-        }
         args::Commands::Delete {
             name,
             group,
             all,
             confirm,
+            job,
+            exclude,
         } => {
-            if let Some(name) = name {
-                let job = Job::load(&name)?;
-                job.delete()?;
-            }
-            if let Some(group) = group {
-                Job::iterate_jobs(|job| {
-                    if job.group == group {
-                        let _ = job.delete();
-                    }
-                })?;
-            }
-            if all {
-                if confirm {
-                    Job::iterate_jobs(|job| {
-                        let _ = job.delete();
-                    })?;
-                } else {
-                    eprintln!(
-                        "{}",
-                        "Use --confirm to delete all jobs. This cannot be undone.".failure()
-                    );
+            let filter = if group.is_empty() && job.is_empty() {
+                JobFilter::All { exclude }
+            } else {
+                JobFilter::Subset {
+                    groups: group,
+                    jobs: job,
+                    exclude,
                 }
+            };
+
+            if all && !confirm {
+                eprintln!(
+                    "{}",
+                    "Use --confirm to delete all jobs. This cannot be undone.".failure()
+                );
+            } else {
+                Job::iterate_jobs_filtered(
+                    |job| {
+                        let _ = job.delete();
+                    },
+                    &filter,
+                )?;
             }
         }
     }

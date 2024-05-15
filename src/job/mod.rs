@@ -52,13 +52,32 @@ impl JobRestartStrategy {
 
 pub enum JobFilter {
     All {
-        except: Vec<String>,
+        exclude: Vec<String>,
     },
     Subset {
         jobs: Vec<String>,
         groups: Vec<String>,
-        except: Vec<String>,
+        exclude: Vec<String>,
     },
+}
+
+impl JobFilter {
+    pub fn matches(&self, job: &Job) -> bool {
+        match self {
+            JobFilter::All { exclude } => !exclude.contains(&job.name),
+            JobFilter::Subset {
+                groups,
+                jobs,
+                exclude,
+            } => {
+                if exclude.contains(&job.name) {
+                    return false;
+                }
+
+                groups.contains(&job.group) || jobs.contains(&job.name)
+            }
+        }
+    }
 }
 
 impl Job {
@@ -98,7 +117,23 @@ impl Job {
         Ok(())
     }
 
-    pub fn iterate_jobs<F>(mut f: F) -> Result<()>
+    // pub fn iterate_jobs<F>(mut f: F) -> Result<()>
+    // where
+    //     F: FnMut(Job),
+    // {
+    //     let jobs = Self::jobs_dir()?;
+    //     for entry in std::fs::read_dir(jobs)? {
+    //         let entry = entry?;
+    //         let path = entry.path();
+    //         if path.is_file() {
+    //             let job: Job = serde_json::from_reader(std::fs::File::open(&path)?)?;
+    //             f(job);
+    //         }
+    //     }
+    //     Ok(())
+    // }
+
+    pub fn iterate_jobs_filtered<F>(mut f: F, filter: &JobFilter) -> Result<()>
     where
         F: FnMut(Job),
     {
@@ -108,14 +143,16 @@ impl Job {
             let path = entry.path();
             if path.is_file() {
                 let job: Job = serde_json::from_reader(std::fs::File::open(&path)?)?;
-                f(job);
+                if filter.matches(&job) {
+                    f(job);
+                }
             }
         }
 
         Ok(())
     }
 
-    pub fn list(group: Option<String>) -> Result<()> {
+    pub fn list(job_filter: JobFilter) -> Result<()> {
         let jobs = Self::jobs_dir()?;
         let mut table = Table::new();
         table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
@@ -135,10 +172,8 @@ impl Job {
             let path = entry.path();
             if path.is_file() {
                 let job: Job = serde_json::from_reader(std::fs::File::open(&path)?)?;
-                if let Some(ref group) = group {
-                    if &job.group != group {
-                        continue;
-                    }
+                if !job_filter.matches(&job) {
+                    continue;
                 }
 
                 table.add_row(row![
