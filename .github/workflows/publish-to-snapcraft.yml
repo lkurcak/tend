@@ -26,7 +26,7 @@ jobs:
         echo "description: Quickly spin up/down groups of command-line tasks with automated recovery" >> snapcraft.yaml
         echo "" >> snapcraft.yaml
         echo "confinement: strict" >> snapcraft.yaml
-        echo "base: core18" >> snapcraft.yaml
+        echo "base: core22" >> snapcraft.yaml
         echo "" >> snapcraft.yaml
         echo "parts:" >> snapcraft.yaml
         echo "  tend:" >> snapcraft.yaml
