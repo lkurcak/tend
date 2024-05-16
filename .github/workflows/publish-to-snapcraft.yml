@@ -53,10 +53,10 @@ jobs:
         cat snapcraft.yaml
     - uses: snapcore/action-build@v1
       id: build-snap
-    - if: build-for == 'amd64'
+    - if: matrix.build-for == 'amd64'
       run: |
         sudo snap install --dangerous ${{ steps.build-snap.outputs.snap }}
-    - if: build-for == 'amd64'
+    - if: matrix.build-for == 'amd64'
       run: |
         tend --version
     - uses: snapcore/action-publish@v1
