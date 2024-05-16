@@ -45,7 +45,7 @@ jobs:
     - run: |
         sudo snap install --dangerous ${{ steps.build-snap.outputs.snap }}
     - run: |
-        gbeuzeboc-snapped-ros2-pkg.snapped-ros2-launch --print-description
+        tend --help
     - uses: actions/upload-artifact@v4
       with:
         name: tend-pkg
