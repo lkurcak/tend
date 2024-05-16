@@ -28,6 +28,13 @@ jobs:
         echo "confinement: strict" >> snapcraft.yaml
         echo "base: core22" >> snapcraft.yaml
         echo "" >> snapcraft.yaml
+        echo "architectures:" >> snapcraft.yaml
+        echo "  - amd64" >> snapcraft.yaml
+        echo "  - arm64" >> snapcraft.yaml
+        echo "  - armhf" >> snapcraft.yaml
+        echo "  - i386" >> snapcraft.yaml
+        echo "  - riscv64" >> snapcraft.yaml
+        echo "" >> snapcraft.yaml
         echo "parts:" >> snapcraft.yaml
         echo "  tend:" >> snapcraft.yaml
         echo "    plugin: rust" >> snapcraft.yaml
@@ -36,6 +43,7 @@ jobs:
         echo "apps:" >> snapcraft.yaml
         echo "  tend:" >> snapcraft.yaml
         echo "    command: bin/tend" >> snapcraft.yaml
+        cat snapcraft.yaml
     - uses: snapcore/action-build@v1
       id: build-snap
 
