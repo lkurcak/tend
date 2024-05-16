@@ -61,8 +61,9 @@ jobs:
         name: tend-pkg
         path: .
     - uses: snapcore/action-publish@v1
+      env:
+        SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
       with:
-        store_login: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         snap: ${{needs.build.outputs.snap-file}}
         #release: ${{ startsWith(github.ref, 'refs/tags/') && 'candidate' || 'edge'}}
         release: 'candidate'
