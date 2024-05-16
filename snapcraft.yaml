@@ -3,9 +3,6 @@ version: git
 summary: Quickly spin up/down groups of command-line tasks with automated recovery
 description: Quickly spin up/down groups of command-line tasks with automated recovery
 
-base: core22
-confinement: devmode
-
 parts:
   tend:
     plugin: rust
