@@ -29,11 +29,16 @@ jobs:
         echo "base: core22" >> snapcraft.yaml
         echo "" >> snapcraft.yaml
         echo "architectures:" >> snapcraft.yaml
-        echo "  - amd64" >> snapcraft.yaml
-        echo "  - arm64" >> snapcraft.yaml
-        echo "  - armhf" >> snapcraft.yaml
-        echo "  - i386" >> snapcraft.yaml
-        echo "  - riscv64" >> snapcraft.yaml
+        echo "  - build-on: [amd64]" >> snapcraft.yaml
+        echo "    build-for: [amd64]" >> snapcraft.yaml
+        echo "  - build-on: [amd64]" >> snapcraft.yaml
+        echo "    build-for: [arm64]" >> snapcraft.yaml
+        echo "  - build-on: [amd64]" >> snapcraft.yaml
+        echo "    build-for: [armhf]" >> snapcraft.yaml
+        echo "  - build-on: [amd64]" >> snapcraft.yaml
+        echo "    build-for: [i386]" >> snapcraft.yaml
+        echo "  - build-on: [amd64]" >> snapcraft.yaml
+        echo "    build-for: [riscv64]" >> snapcraft.yaml
         echo "" >> snapcraft.yaml
         echo "parts:" >> snapcraft.yaml
         echo "  tend:" >> snapcraft.yaml
