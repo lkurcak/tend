@@ -1,0 +1,16 @@
+name: tend
+version: git
+summary: Quickly spin up/down groups of command-line tasks with automated recovery
+description: Quickly spin up/down groups of command-line tasks with automated recovery
+
+confinement: strict
+base: core22
+
+parts:
+  tend:
+    plugin: rust
+    source: .
+
+apps:
+  tend:
+    command: bin/tend
