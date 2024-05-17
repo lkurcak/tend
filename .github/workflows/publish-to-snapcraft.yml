@@ -18,7 +18,6 @@ jobs:
         - build-for: 'armhf'
         - build-for: 'i386'
         - build-for: 'riscv64'
-        - bulid-for: 'ppc64el'
     
     runs-on: ubuntu-latest
     outputs:
