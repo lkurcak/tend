@@ -22,7 +22,6 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 pub enum Commands {
     #[command(alias = "l", alias = "ls", about = "List jobs")]
-    // #[clap(group(clap::ArgGroup::new("input").required(false).multiple(true).args(&["name", "group", "job", "all"])))]
     List {
         #[arg(help = "Name of the job to list", exclusive = true)]
         name: Option<String>,
@@ -56,7 +55,6 @@ pub enum Commands {
         exclude: Vec<String>,
     },
     #[command(alias = "r", alias = "start", about = "Start jobs")]
-    // #[clap(group(clap::ArgGroup::new("input").required(false).args(&["name", "group", "job", "all"])))]
     Run {
         #[arg(help = "Name of the job to run", exclusive = true)]
         name: Option<String>,
