@@ -63,7 +63,7 @@ pub enum Commands {
             long,
             help = "Start all jobs",
             conflicts_with = "group",
-            conflicts_with = "job",
+            conflicts_with = "job"
         )]
         all: bool,
         #[arg(
@@ -124,7 +124,7 @@ pub enum Commands {
             long,
             help = "Delete all jobs",
             conflicts_with = "group",
-            conflicts_with = "job",
+            conflicts_with = "job"
         )]
         all: bool,
         #[arg(
