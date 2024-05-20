@@ -51,9 +51,33 @@ impl JobRestartStrategy {
 }
 
 pub enum JobFilter {
-    All,
-    Job { job: String },
-    Group { group: String },
+    All {
+        exclude: Vec<String>,
+    },
+    Subset {
+        jobs: Vec<String>,
+        groups: Vec<String>,
+        exclude: Vec<String>,
+    },
+}
+
+impl JobFilter {
+    pub fn matches(&self, job: &Job) -> bool {
+        match self {
+            JobFilter::All { exclude } => !exclude.contains(&job.name),
+            JobFilter::Subset {
+                groups,
+                jobs,
+                exclude,
+            } => {
+                if exclude.contains(&job.name) {
+                    return false;
+                }
+
+                groups.contains(&job.group) || jobs.contains(&job.name)
+            }
+        }
+    }
 }
 
 impl Job {
@@ -78,13 +102,13 @@ impl Job {
         Ok(())
     }
 
-    pub fn load(name: &str) -> Result<Self> {
-        let jobs = Self::jobs_dir()?;
-        let file = std::fs::File::open(jobs.join(name))?;
-        let job: Job = serde_json::from_reader(file)?;
+    // pub fn load(name: &str) -> Result<Self> {
+    //     let jobs = Self::jobs_dir()?;
+    //     let file = std::fs::File::open(jobs.join(name))?;
+    //     let job: Job = serde_json::from_reader(file)?;
 
-        Ok(job)
-    }
+    //     Ok(job)
+    // }
 
     pub fn delete(&self) -> Result<()> {
         let jobs = Self::jobs_dir()?;
@@ -93,7 +117,7 @@ impl Job {
         Ok(())
     }
 
-    pub fn iterate_jobs<F>(mut f: F) -> Result<()>
+    pub fn iterate_jobs_filtered<F>(mut f: F, filter: &JobFilter) -> Result<()>
     where
         F: FnMut(Job),
     {
@@ -103,14 +127,16 @@ impl Job {
             let path = entry.path();
             if path.is_file() {
                 let job: Job = serde_json::from_reader(std::fs::File::open(&path)?)?;
-                f(job);
+                if filter.matches(&job) {
+                    f(job);
+                }
             }
         }
 
         Ok(())
     }
 
-    pub fn list(group: Option<String>) -> Result<()> {
+    pub fn list(job_filter: JobFilter) -> Result<()> {
         let jobs = Self::jobs_dir()?;
         let mut table = Table::new();
         table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
@@ -130,10 +156,8 @@ impl Job {
             let path = entry.path();
             if path.is_file() {
                 let job: Job = serde_json::from_reader(std::fs::File::open(&path)?)?;
-                if let Some(ref group) = group {
-                    if &job.group != group {
-                        continue;
-                    }
+                if !job_filter.matches(&job) {
+                    continue;
                 }
 
                 table.add_row(row![

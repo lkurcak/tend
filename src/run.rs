@@ -2,38 +2,26 @@ use crate::{job::JobFilter, Job};
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 
-pub async fn run(start_args: JobFilter, verbose: bool) -> anyhow::Result<()> {
+pub async fn run(job_filter: JobFilter, verbose: bool) -> anyhow::Result<()> {
     let mut join_handles = HashMap::new();
     let mut cancel_handles = HashMap::new();
 
     let mut count = 0;
 
-    Job::iterate_jobs(|job| {
-        match &start_args {
-            JobFilter::All => {}
-            JobFilter::Job { job: name } => {
-                if &job.name != name {
-                    return;
-                }
-            }
-            JobFilter::Group { group } => {
-                if &job.group != group {
-                    return;
-                }
-            }
-        }
+    Job::iterate_jobs_filtered(
+        |job| {
+            count += 1;
 
-        count += 1;
-
-        let (tx, rx) = mpsc::channel::<()>(1);
-        let handle = tokio::spawn(job.clone().create_repeated_process(rx, verbose));
-        cancel_handles.insert(job.name.clone(), tx);
-        join_handles.insert(job.name.clone(), handle);
-    })?;
+            let (tx, rx) = mpsc::channel::<()>(1);
+            let handle = tokio::spawn(job.clone().create_repeated_process(rx, verbose));
+            cancel_handles.insert(job.name.clone(), tx);
+            join_handles.insert(job.name.clone(), handle);
+        },
+        &job_filter,
+    )?;
 
     if count == 0 {
-        println!("No jobs matched.");
-        return Ok(());
+        anyhow::bail!("No jobs matched.");
     }
 
     tokio::select! {

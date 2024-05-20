@@ -8,6 +8,32 @@ use crate::job::{Job, JobFilter};
 use anyhow::Result;
 use clap::Parser;
 
+fn standard_job_filter(
+    name: Option<String>,
+    _all: bool,
+    group: Vec<String>,
+    job: Vec<String>,
+    exclude: Vec<String>,
+) -> JobFilter {
+    if group.is_empty() && job.is_empty() {
+        if let Some(name) = name {
+            JobFilter::Subset {
+                groups: vec![],
+                jobs: vec![name],
+                exclude,
+            }
+        } else {
+            JobFilter::All { exclude }
+        }
+    } else {
+        JobFilter::Subset {
+            groups: group,
+            jobs: job,
+            exclude,
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = args::Cli::parse();
@@ -17,17 +43,26 @@ async fn main() -> Result<()> {
     }
 
     match args.command {
-        args::Commands::List { group } => {
-            Job::list(group)?;
+        args::Commands::List {
+            all,
+            group,
+            job,
+            exclude,
+            name,
+        } => {
+            let filter = standard_job_filter(name, all, group, job, exclude);
+
+            Job::list(filter)?;
         }
-        args::Commands::Run { group, job, all: _ } => {
-            let filter: JobFilter = if let Some(group) = group {
-                JobFilter::Group { group }
-            } else if let Some(job) = job {
-                JobFilter::Job { job }
-            } else {
-                JobFilter::All
-            };
+        args::Commands::Run {
+            name,
+            group,
+            job,
+            all,
+            exclude,
+        } => {
+            let filter = standard_job_filter(name, all, group, job, exclude);
+
             run::run(filter, args.verbose).await?;
         }
         args::Commands::Create {
@@ -67,29 +102,23 @@ async fn main() -> Result<()> {
             group,
             all,
             confirm,
+            job,
+            exclude,
         } => {
-            if let Some(name) = name {
-                let job = Job::load(&name)?;
-                job.delete()?;
-            }
-            if let Some(group) = group {
-                Job::iterate_jobs(|job| {
-                    if job.group == group {
+            let filter = standard_job_filter(name, all, group, job, exclude);
+
+            if all && !confirm {
+                eprintln!(
+                    "{}",
+                    "Use --confirm to delete all jobs. This cannot be undone.".failure()
+                );
+            } else {
+                Job::iterate_jobs_filtered(
+                    |job| {
                         let _ = job.delete();
-                    }
-                })?;
-            }
-            if all {
-                if confirm {
-                    Job::iterate_jobs(|job| {
-                        let _ = job.delete();
-                    })?;
-                } else {
-                    eprintln!(
-                        "{}",
-                        "Use --confirm to delete all jobs. This cannot be undone.".failure()
-                    );
-                }
+                    },
+                    &filter,
+                )?;
             }
         }
     }
