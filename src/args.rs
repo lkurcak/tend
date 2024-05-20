@@ -27,8 +27,8 @@ pub enum Commands {
         #[arg(help = "Name of the job to list", exclusive = true)]
         name: Option<String>,
         #[arg(
-            short, 
-            long, 
+            short,
+            long,
             help = "List all jobs",
             conflicts_with = "group",
             conflicts_with = "job"
@@ -44,10 +44,10 @@ pub enum Commands {
         )]
         group: Vec<String>,
         #[arg(
-            short, 
-            long, 
-            help = "List specific job(s)", 
-            num_args = 1.., 
+            short,
+            long,
+            help = "List specific job(s)",
+            num_args = 1..,
             conflicts_with = "all",
             use_value_delimiter = true,
         )]
@@ -61,8 +61,8 @@ pub enum Commands {
         #[arg(help = "Name of the job to run", exclusive = true)]
         name: Option<String>,
         #[arg(
-            short, 
-            long, 
+            short,
+            long,
             help = "Start all jobs",
             conflicts_with = "group",
             conflicts_with = "job",
@@ -78,10 +78,10 @@ pub enum Commands {
         )]
         group: Vec<String>,
         #[arg(
-            short, 
-            long, 
-            help = "Start specific job(s)", 
-            num_args = 1.., 
+            short,
+            long,
+            help = "Start specific job(s)",
+            num_args = 1..,
             conflicts_with = "all",
             use_value_delimiter = true
         )]
@@ -139,10 +139,10 @@ pub enum Commands {
         )]
         group: Vec<String>,
         #[arg(
-            short, 
-            long, 
-            help = "Delete specific job(s)", 
-            num_args = 1.., 
+            short,
+            long,
+            help = "Delete specific job(s)",
+            num_args = 1..,
             conflicts_with = "all",
             use_value_delimiter = true
         )]
