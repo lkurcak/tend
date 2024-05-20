@@ -102,13 +102,13 @@ impl Job {
         Ok(())
     }
 
-    pub fn load(name: &str) -> Result<Self> {
-        let jobs = Self::jobs_dir()?;
-        let file = std::fs::File::open(jobs.join(name))?;
-        let job: Job = serde_json::from_reader(file)?;
+    // pub fn load(name: &str) -> Result<Self> {
+    //     let jobs = Self::jobs_dir()?;
+    //     let file = std::fs::File::open(jobs.join(name))?;
+    //     let job: Job = serde_json::from_reader(file)?;
 
-        Ok(job)
-    }
+    //     Ok(job)
+    // }
 
     pub fn delete(&self) -> Result<()> {
         let jobs = Self::jobs_dir()?;
@@ -116,22 +116,6 @@ impl Job {
 
         Ok(())
     }
-
-    // pub fn iterate_jobs<F>(mut f: F) -> Result<()>
-    // where
-    //     F: FnMut(Job),
-    // {
-    //     let jobs = Self::jobs_dir()?;
-    //     for entry in std::fs::read_dir(jobs)? {
-    //         let entry = entry?;
-    //         let path = entry.path();
-    //         if path.is_file() {
-    //             let job: Job = serde_json::from_reader(std::fs::File::open(&path)?)?;
-    //             f(job);
-    //         }
-    //     }
-    //     Ok(())
-    // }
 
     pub fn iterate_jobs_filtered<F>(mut f: F, filter: &JobFilter) -> Result<()>
     where

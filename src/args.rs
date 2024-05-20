@@ -22,35 +22,69 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 pub enum Commands {
     #[command(alias = "l", alias = "ls", about = "List jobs")]
+    // #[clap(group(clap::ArgGroup::new("input").required(false).multiple(true).args(&["name", "group", "job", "all"])))]
     List {
-        #[arg(short, long, help = "List all jobs", exclusive = true)]
+        #[arg(help = "Name of the job to list", exclusive = true)]
+        name: Option<String>,
+        #[arg(
+            short, 
+            long, 
+            help = "List all jobs",
+            conflicts_with = "group",
+            conflicts_with = "job"
+        )]
         all: bool,
         #[arg(
             short,
             long,
             help = "List jobs from specific group(s)",
             num_args = 1..,
+            conflicts_with = "all",
             use_value_delimiter = true
         )]
         group: Vec<String>,
-        #[arg(short, long, help = "List specific job(s)", num_args = 1.., use_value_delimiter = true)]
+        #[arg(
+            short, 
+            long, 
+            help = "List specific job(s)", 
+            num_args = 1.., 
+            conflicts_with = "all",
+            use_value_delimiter = true,
+        )]
         job: Vec<String>,
         #[arg(alias = "except", short, long, help = "Exclude specific job(s)", num_args = 1.., use_value_delimiter = true)]
         exclude: Vec<String>,
     },
     #[command(alias = "r", alias = "start", about = "Start jobs")]
+    // #[clap(group(clap::ArgGroup::new("input").required(false).args(&["name", "group", "job", "all"])))]
     Run {
-        #[arg(short, long, help = "Start all jobs", exclusive = true)]
+        #[arg(help = "Name of the job to run", exclusive = true)]
+        name: Option<String>,
+        #[arg(
+            short, 
+            long, 
+            help = "Start all jobs",
+            conflicts_with = "group",
+            conflicts_with = "job",
+        )]
         all: bool,
         #[arg(
             short,
             long,
             help = "Start jobs from specific group(s)",
             num_args = 1..,
+            conflicts_with = "all",
             use_value_delimiter = true
         )]
         group: Vec<String>,
-        #[arg(short, long, help = "Start specific job(s)", num_args = 1.., use_value_delimiter = true)]
+        #[arg(
+            short, 
+            long, 
+            help = "Start specific job(s)", 
+            num_args = 1.., 
+            conflicts_with = "all",
+            use_value_delimiter = true
+        )]
         job: Vec<String>,
         #[arg(alias = "except", short, long, help = "Exclude specific job(s)", num_args = 1.., use_value_delimiter = true)]
         exclude: Vec<String>,
@@ -91,9 +125,8 @@ pub enum Commands {
             short,
             long,
             help = "Delete all jobs",
-            conflicts_with = "name",
             conflicts_with = "group",
-            conflicts_with = "job"
+            conflicts_with = "job",
         )]
         all: bool,
         #[arg(
@@ -101,10 +134,18 @@ pub enum Commands {
             long,
             help = "Delete jobs from specific group(s)",
             num_args = 1..,
-            use_value_delimiter = true
+            conflicts_with = "all",
+            use_value_delimiter = true,
         )]
         group: Vec<String>,
-        #[arg(short, long, help = "Delete specific job(s)", num_args = 1.., use_value_delimiter = true)]
+        #[arg(
+            short, 
+            long, 
+            help = "Delete specific job(s)", 
+            num_args = 1.., 
+            conflicts_with = "all",
+            use_value_delimiter = true
+        )]
         job: Vec<String>,
         #[arg(alias = "except", short, long, help = "Exclude specific job(s)", num_args = 1.., use_value_delimiter = true)]
         exclude: Vec<String>,

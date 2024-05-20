@@ -8,6 +8,32 @@ use crate::job::{Job, JobFilter};
 use anyhow::Result;
 use clap::Parser;
 
+fn standard_job_filter(
+    name: Option<String>,
+    _all: bool,
+    group: Vec<String>,
+    job: Vec<String>,
+    exclude: Vec<String>,
+) -> JobFilter {
+    if group.is_empty() && job.is_empty() {
+        if let Some(name) = name {
+            JobFilter::Subset {
+                groups: vec![],
+                jobs: vec![name],
+                exclude,
+            }
+        } else {
+            JobFilter::All { exclude }
+        }
+    } else {
+        JobFilter::Subset {
+            groups: group,
+            jobs: job,
+            exclude,
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = args::Cli::parse();
@@ -18,40 +44,24 @@ async fn main() -> Result<()> {
 
     match args.command {
         args::Commands::List {
-            // name,
-            all: _,
+            all,
             group,
             job,
             exclude,
+            name,
         } => {
-            let filter = if group.is_empty() && job.is_empty() {
-                JobFilter::All { exclude }
-            } else {
-                JobFilter::Subset {
-                    groups: group,
-                    jobs: job,
-                    exclude,
-                }
-            };
+            let filter = standard_job_filter(name, all, group, job, exclude);
 
             Job::list(filter)?;
         }
         args::Commands::Run {
-            // name,
+            name,
             group,
             job,
-            all: _,
+            all,
             exclude,
         } => {
-            let filter = if group.is_empty() && job.is_empty() {
-                JobFilter::All { exclude }
-            } else {
-                JobFilter::Subset {
-                    groups: group,
-                    jobs: job,
-                    exclude,
-                }
-            };
+            let filter = standard_job_filter(name, all, group, job, exclude);
 
             run::run(filter, args.verbose).await?;
         }
@@ -95,15 +105,7 @@ async fn main() -> Result<()> {
             job,
             exclude,
         } => {
-            let filter = if group.is_empty() && job.is_empty() {
-                JobFilter::All { exclude }
-            } else {
-                JobFilter::Subset {
-                    groups: group,
-                    jobs: job,
-                    exclude,
-                }
-            };
+            let filter = standard_job_filter(name, all, group, job, exclude);
 
             if all && !confirm {
                 eprintln!(
