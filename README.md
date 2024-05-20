@@ -5,18 +5,26 @@
 
 ### Installation
 
-Download pre-built **[binaries](https://github.com/lubomirkurcak/tend/releases)** if you are using **Windows**, **macOS** or **Linux**.
+**[Download binaries](https://github.com/lubomirkurcak/tend/releases)** if you are using **Windows**, **macOS** or **Linux**.
 
-#### Snap
+You can install `tend` using `snap`:
 
 ```sh
 sudo snap install tend
 ```
 
-#### Cargo
+Or using `cargo`:
 
 ```sh
 cargo install tend
+```
+
+Or build from source, make sure you have [Rust](https://www.rust-lang.org/tools/install) installed:
+
+```sh
+git clone https://github.com/lubomirkurcak/tend
+cd tend
+cargo build --release
 ```
 
 ### Usage
@@ -39,14 +47,6 @@ Press `Ctrl-C` to cancel all jobs and exit the program.
 List jobs:
 ```sh
 tend list
-```
-
-```
-+-------+---------+---------+-------------------+------------+---------+
-| Job   | Program | Args    | Working Directory | Restart    | Group   |
-+-------+---------+---------+-------------------+------------+---------+
-| hello | ping    | 8.8.8.8 | /home/user        | on failure | default |
-+-------+---------+---------+-------------------+------------+---------+
 ```
 
 Reconfigure `hello` to always restart on completion (even successful):
