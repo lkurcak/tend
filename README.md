@@ -25,7 +25,7 @@ Or using `cargo`:
 cargo install tend
 ```
 
-Or build from source, make sure you have [Rust](https://www.rust-lang.org/tools/install) installed:
+Or build from source:
 
 ```sh
 git clone https://github.com/lubomirkurcak/tend
@@ -41,9 +41,9 @@ Create a new job called `hello`:
 tend create hello ping 8.8.8.8
 ```
 
-Run all jobs:
+Run `hello`:
 ```sh
-tend run
+tend run hello
 ```
 
 Press `Ctrl-C` to cancel all jobs and exit the program.
@@ -57,7 +57,7 @@ tend list
 
 Reconfigure `hello` to always restart on completion (even successful):
 ```sh
-tend create hello ping 8.8.8.8 --restart=always --overwrite
+tend create --overwrite hello --restart=always ping 8.8.8.8
 ```
 
 #### Available Programs
