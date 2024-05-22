@@ -18,7 +18,7 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
 
       - name: Install
-        run: cargo install --verbose
+        run: cargo install tend --verbose
 
   snap:
     runs-on: ubuntu-latest
@@ -51,14 +51,14 @@ jobs:
 
   winget:
     runs-on: windows-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - name: Install winget
+      uses: Cyberboss/install-winget@v1
+      with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Install
-      run: |
-        winget install lubomirkurcak.tend
+    - name: Install wingetcreate
+      run: winget install lubomirkurcak.tend --disable-interactivity --accept-source-agreements
 
     - name: List installed packages
       run: |
