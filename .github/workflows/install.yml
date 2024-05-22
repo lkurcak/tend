@@ -62,6 +62,7 @@ jobs:
     - name: Install
       run: |
         winget install lubomirkurcak.tend --disable-interactivity --accept-source-agreements
+        exit
 
     - name: List installed packages
       run: |
@@ -70,7 +71,9 @@ jobs:
     - name: Refresh env variables
       shell: pwsh
       run: |
+        echo $env:Path
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        echo $env:Path
 
     - name: Run
       run: |
