@@ -21,6 +21,10 @@ jobs:
         run: |
           cargo install tend --verbose
 
+      - name: Run
+        run: |
+          tend --version
+
   snap:
     runs-on: ubuntu-latest
 
@@ -62,18 +66,14 @@ jobs:
     - name: Install
       run: |
         winget install lubomirkurcak.tend --disable-interactivity --accept-source-agreements
-        exit
 
     - name: List installed packages
       run: |
         winget list
 
-    - name: Refresh env variables
-      shell: pwsh
+    - name: Add winget links to path
       run: |
-        echo $env:Path
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-        echo $env:Path
+        Add-Content $env:GITHUB_PATH "$env:LOCALAPPDATA/Microsoft/WinGet/Links/"
 
     - name: Run
       run: |
