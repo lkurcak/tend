@@ -57,7 +57,7 @@ jobs:
       with:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Install wingetcreate
+    - name: Install
       run: winget install lubomirkurcak.tend --disable-interactivity --accept-source-agreements
 
     - name: List installed packages
