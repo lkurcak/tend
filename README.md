@@ -13,6 +13,12 @@ You can install `tend` using `snap`:
 sudo snap install tend
 ```
 
+Or with `winget`:
+
+```sh
+winget install lubomirkurcak.tend
+```
+
 Or using `cargo`:
 
 ```sh
