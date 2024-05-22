@@ -18,7 +18,8 @@ jobs:
           toolchain: stable
 
       - name: Install
-        run: cargo install --verbose
+        run: |
+          cargo install tend --verbose
 
   snap:
     runs-on: ubuntu-latest
@@ -35,7 +36,8 @@ jobs:
         sudo ln -s /var/lib/snapd/snap /snap
 
     - name: Ensure snapd is running
-      run: sudo systemctl start snapd
+      run: |
+        sudo systemctl start snapd
 
     - name: Install
       run: |
@@ -51,27 +53,15 @@ jobs:
 
   winget:
     runs-on: windows-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
     - name: Install winget
-      shell: pwsh
-      run: |
-        $progressPreference = 'silentlyContinue'
-        Write-Information "Downloading WinGet and its dependencies..."
-        Invoke-WebRequest -Uri https://aka.ms/getwinget -OutFile Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
-        Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
-        Invoke-WebRequest -Uri https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx -OutFile Microsoft.UI.Xaml.2.8.x64.appx
-        Add-AppxPackage Microsoft.VCLibs.x64.14.00.Desktop.appx
-        Add-AppxPackage Microsoft.UI.Xaml.2.8.x64.appx
-        Add-AppxPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
-
+      uses: Cyberboss/install-winget@v1
+      with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Install
       run: |
-        winget install lubomirkurcak.tend
+        winget install lubomirkurcak.tend --disable-interactivity --accept-source-agreements
 
     - name: List installed packages
       run: |
