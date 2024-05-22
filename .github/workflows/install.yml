@@ -1,0 +1,69 @@
+name: install
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  cargo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+
+      - name: Install
+        run: cargo install --verbose
+
+  snap:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Update and install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y snapd
+        sudo systemctl enable --now snapd.socket
+        sudo ln -s /var/lib/snapd/snap /snap
+
+    - name: Ensure snapd is running
+      run: sudo systemctl start snapd
+
+    - name: Install
+      run: |
+        sudo snap install tend
+
+    - name: List installed snaps
+      run: |
+        snap list
+
+    - name: Run
+      run: |
+        tend --version
+
+  winget:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install
+      run: |
+        winget install lubomirkurcak.tend
+
+    - name: List installed packages
+      run: |
+        winget list
+
+    - name: Run
+      run: |
+        tend --version
