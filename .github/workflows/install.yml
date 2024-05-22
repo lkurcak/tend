@@ -18,7 +18,8 @@ jobs:
           toolchain: stable
 
       - name: Install
-        run: cargo install tend --verbose
+        run: |
+          cargo install tend --verbose
 
   snap:
     runs-on: ubuntu-latest
@@ -35,7 +36,8 @@ jobs:
         sudo ln -s /var/lib/snapd/snap /snap
 
     - name: Ensure snapd is running
-      run: sudo systemctl start snapd
+      run: |
+        sudo systemctl start snapd
 
     - name: Install
       run: |
@@ -58,7 +60,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Install
-      run: winget install lubomirkurcak.tend --disable-interactivity --accept-source-agreements
+      run: |
+        winget install lubomirkurcak.tend --disable-interactivity --accept-source-agreements
 
     - name: List installed packages
       run: |
