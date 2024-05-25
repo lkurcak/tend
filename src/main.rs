@@ -62,6 +62,7 @@ async fn main() -> Result<()> {
             exclude,
         } => {
             let filter = standard_job_filter(name, all, group, job, exclude);
+
             run::run(filter, args.verbose).await?;
         }
         args::Commands::Create {
