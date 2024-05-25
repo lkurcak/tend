@@ -8,34 +8,17 @@ pub async fn run(job_filter: JobFilter, verbose: bool) -> anyhow::Result<()> {
 
     let mut count = 0;
 
-    Job::iterate_jobs(|job| {
-        match &job_filter {
-            JobFilter::All { except } => {
-                if except.contains(&job.name) {
-                    return;
-                }
-            }
-            JobFilter::Subset {
-                groups,
-                jobs,
-                except,
-            } => {
-                if except.contains(&job.name) {
-                    return;
-                }
-                if !(groups.contains(&job.group) || jobs.contains(&job.name)) {
-                    return;
-                }
-            }
-        }
+    Job::iterate_jobs_filtered(
+        |job| {
+            count += 1;
 
-        count += 1;
-
-        let (tx, rx) = mpsc::channel::<()>(1);
-        let handle = tokio::spawn(job.clone().create_repeated_process(rx, verbose));
-        cancel_handles.insert(job.name.clone(), tx);
-        join_handles.insert(job.name.clone(), handle);
-    })?;
+            let (tx, rx) = mpsc::channel::<()>(1);
+            let handle = tokio::spawn(job.clone().create_repeated_process(rx, verbose));
+            cancel_handles.insert(job.name.clone(), tx);
+            join_handles.insert(job.name.clone(), handle);
+        },
+        &job_filter,
+    )?;
 
     if count == 0 {
         anyhow::bail!("No jobs matched.");
