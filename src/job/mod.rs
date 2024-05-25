@@ -10,21 +10,6 @@ use tokio::{
     sync::mpsc::Receiver,
 };
 
-// E0515 11:45:17.837897   23508 portforward.go:372] error copying from remote stream to local connection: readfrom tcp4 127.0.0.1:8443->127.0.0.1:50656: write tcp4 127.0.0.1:8443->127.0.0.1:50656: wsasend: An established connection was aborted by the software in your host machine.
-// E0515 11:45:51.137714   23508 portforward.go:340] error creating error stream for port 8443 -> 8443: Timeout occurred
-// E0515 11:45:51.293626   23508 portforward.go:362] error creating forwarding stream for port 8443 -> 8443: Timeout occurred
-// E0515 11:45:52.013842   23508 portforward.go:362] error creating forwarding stream for port 8443 -> 8443: Timeout occurred
-// E0515 11:46:53.524413   23508 portforward.go:400] an error occurred forwarding 8443 -> 8443: error forwarding port 8443 to pod 20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e, uid : failed to execute portforward in network namespace "/var/run/netns/cni-d0e0bbba-6286-aba6-45a1-fa24e0e614e2": failed to connect to localhost:8443 inside namespace "20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e", IPv4: dial tcp4 127.0.0.1:8443: connect: connection refused IPv6 dial tcp6: address localhost: no suitable address found
-// E0515 11:46:53.608922   23508 portforward.go:400] an error occurred forwarding 8443 -> 8443: error forwarding port 8443 to pod 20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e, uid : failed to execute portforward in network namespace "/var/run/netns/cni-d0e0bbba-6286-aba6-45a1-fa24e0e614e2": failed to connect to localhost:8443 inside namespace "20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e", IPv4: dial tcp4 127.0.0.1:8443: connect: connection refused IPv6 dial tcp6: address localhost: no suitable address found
-// E0515 11:47:03.229256   23508 portforward.go:340] error creating error stream for port 8443 -> 8443: Timeout occurred
-// E0515 11:47:07.613031   23508 portforward.go:340] error creating error stream for port 8443 -> 8443: Timeout occurred
-// E0515 11:47:23.206203   23508 portforward.go:340] error creating error stream for port 8443 -> 8443: Timeout occurred
-// E0515 11:47:23.409211   23508 portforward.go:362] error creating forwarding stream for port 8443 -> 8443: Timeout occurred
-// E0515 11:47:23.786188   23508 portforward.go:400] an error occurred forwarding 8443 -> 8443: error forwarding port 8443 to pod 20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e, uid : network namespace for sandbox "20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e" is closed
-// E0515 11:47:23.973797   23508 portforward.go:362] error creating forwarding stream for port 8443 -> 8443: Timeout occurred
-// E0515 11:47:24.066781   23508 portforward.go:362] error creating forwarding stream for port 8443 -> 8443: Timeout occurred
-// E0515 11:47:37.957485   23508 portforward.go:340] error creating error stream for port 8443 -> 8443: Timeout occurred
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Job {
     pub name: String,
@@ -67,13 +52,32 @@ impl JobRestartStrategy {
 
 pub enum JobFilter {
     All {
-        except: Vec<String>,
+        exclude: Vec<String>,
     },
     Subset {
         jobs: Vec<String>,
         groups: Vec<String>,
-        except: Vec<String>,
+        exclude: Vec<String>,
     },
+}
+
+impl JobFilter {
+    pub fn matches(&self, job: &Job) -> bool {
+        match self {
+            JobFilter::All { exclude } => !exclude.contains(&job.name),
+            JobFilter::Subset {
+                groups,
+                jobs,
+                exclude,
+            } => {
+                if exclude.contains(&job.name) {
+                    return false;
+                }
+
+                groups.contains(&job.group) || jobs.contains(&job.name)
+            }
+        }
+    }
 }
 
 impl Job {
@@ -98,13 +102,13 @@ impl Job {
         Ok(())
     }
 
-    pub fn load(name: &str) -> Result<Self> {
-        let jobs = Self::jobs_dir()?;
-        let file = std::fs::File::open(jobs.join(name))?;
-        let job: Job = serde_json::from_reader(file)?;
+    // pub fn load(name: &str) -> Result<Self> {
+    //     let jobs = Self::jobs_dir()?;
+    //     let file = std::fs::File::open(jobs.join(name))?;
+    //     let job: Job = serde_json::from_reader(file)?;
 
-        Ok(job)
-    }
+    //     Ok(job)
+    // }
 
     pub fn delete(&self) -> Result<()> {
         let jobs = Self::jobs_dir()?;
@@ -113,7 +117,7 @@ impl Job {
         Ok(())
     }
 
-    pub fn iterate_jobs<F>(mut f: F) -> Result<()>
+    pub fn iterate_jobs_filtered<F>(mut f: F, filter: &JobFilter) -> Result<()>
     where
         F: FnMut(Job),
     {
@@ -123,14 +127,16 @@ impl Job {
             let path = entry.path();
             if path.is_file() {
                 let job: Job = serde_json::from_reader(std::fs::File::open(&path)?)?;
-                f(job);
+                if filter.matches(&job) {
+                    f(job);
+                }
             }
         }
 
         Ok(())
     }
 
-    pub fn list(group: Option<String>) -> Result<()> {
+    pub fn list(job_filter: JobFilter) -> Result<()> {
         let jobs = Self::jobs_dir()?;
         let mut table = Table::new();
         table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
@@ -150,10 +156,8 @@ impl Job {
             let path = entry.path();
             if path.is_file() {
                 let job: Job = serde_json::from_reader(std::fs::File::open(&path)?)?;
-                if let Some(ref group) = group {
-                    if &job.group != group {
-                        continue;
-                    }
+                if !job_filter.matches(&job) {
+                    continue;
                 }
 
                 table.add_row(row![
@@ -228,10 +232,6 @@ impl Job {
                     stderr_line = stderr.next_line() => {
                         if let Some(line) = stderr_line? {
                             println!("{}{}{}{}", self.name.job(), " (stderr)".failure(), ": ".job(), line);
-                            if line.contains("error") {
-                                println!("{} stopping", self.name.job());
-                                break 'job;
-                            }
                         }
                         continue 'process;
                     }
