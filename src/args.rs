@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-use crate::job::{JobEventHook, JobRestartBehavior, JobRestartStrategy};
+use crate::job::{JobRestartBehavior, JobRestartStrategy};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -18,8 +18,6 @@ pub struct Cli {
     #[arg(long, help = "Disable color output")]
     pub no_color: bool,
 }
-
-// pub struct JobEvent
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
@@ -113,11 +111,15 @@ pub enum Commands {
             default_value = "default"
         )]
         group: String,
-
-        #[arg(help = "Event hooks.")]
-        event_hooks: Vec<JobEventHook>,
         #[arg(help = "Use -- to separate program arguments from job arguments.")]
         args: Vec<String>,
+    },
+    #[command(alias = "e", alias = "ed", about = "Edit a job")]
+    Edit {
+        #[arg(help = "Name of the job to edit", exclusive = true)]
+        name: String,
+        #[command(subcommand)]
+        command: EditJobCommands,
     },
     #[command(alias = "d", alias = "rm", about = "Delete jobs")]
     #[clap(group(clap::ArgGroup::new("input").required(true).args(&["name", "group", "job", "all"])))]
@@ -154,5 +156,42 @@ pub enum Commands {
         exclude: Vec<String>,
         #[arg(short, long, help = "Confirm delete action")]
         confirm: bool,
+    },
+}
+
+#[derive(Clone, Debug, Subcommand)]
+pub enum EditJobCommands {
+    #[command(about = "Change the group of a job")]
+    Group {
+        #[arg(help = "New group name")]
+        group: String,
+    },
+    Hook {
+        #[command(subcommand)]
+        command: EditJobHookCommands,
+    },
+}
+
+#[derive(Clone, Debug, Subcommand)]
+pub enum EditJobHookCommands {
+    List,
+    Create {
+        #[arg(help = "Name of the hook to create")]
+        hook: String,
+        #[command(subcommand)]
+        t: JobHook,
+    },
+    Delete {
+        #[arg(help = "Name of the hook to delete")]
+        hook: String,
+    },
+}
+
+#[derive(Clone, Debug, Subcommand)]
+pub enum JobHook {
+    DetectedSubstring {
+        substring: String,
+        #[arg(help = "Stream to detect substring in.", default_value = "any")]
+        stream: crate::job::Stream,
     },
 }

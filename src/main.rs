@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::colors::TendColors;
 mod args;
 mod colors;
@@ -73,7 +75,6 @@ async fn main() -> Result<()> {
             group,
             overwrite,
             restart_strategy,
-            event_hooks,
         } => {
             let job = Job {
                 name,
@@ -83,7 +84,7 @@ async fn main() -> Result<()> {
                 group,
                 working_directory: std::env::current_dir()?,
                 restart_strategy,
-                event_hooks,
+                event_hooks: HashMap::new(),
             };
             let res = job.save(overwrite);
             if let Err(ref error) = res {
@@ -98,6 +99,44 @@ async fn main() -> Result<()> {
                 }
             }
             res?;
+        }
+        args::Commands::Edit { name, command } => {
+            let mut job = Job::load(&name)?;
+            match command {
+                args::EditJobCommands::Group { group } => job.group = group,
+                args::EditJobCommands::Hook { command } => match command {
+                    args::EditJobHookCommands::List => {
+                        if job.event_hooks.is_empty() {
+                            println!("No hooks defined for job {}", job.name);
+                        } else {
+                            for (name, hook) in job.event_hooks.iter() {
+                                println!("{}: {:?}", name, hook);
+                            }
+                        }
+                    }
+                    args::EditJobHookCommands::Create { hook, t } => match t {
+                        args::JobHook::DetectedSubstring { substring, stream } => {
+                            job.event_hooks.insert(
+                                hook.clone(),
+                                job::JobEventHook {
+                                    event: job::JobEvent::DetectedSubstring {
+                                        contains: substring,
+                                        stream,
+                                    },
+                                    action: job::JobAction::Restart,
+                                },
+                            );
+                        }
+                    },
+                    args::EditJobHookCommands::Delete { hook } => {
+                        match job.event_hooks.remove(&hook) {
+                            Some(_) => println!("Hook {} deleted", hook),
+                            None => eprintln!("Hook {} not found", hook),
+                        }
+                    }
+                },
+            }
+            job.save(true)?;
         }
         args::Commands::Delete {
             name,

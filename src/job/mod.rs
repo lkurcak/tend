@@ -1,9 +1,10 @@
 use crate::colors::TendColors;
 use anyhow::Result;
+use clap::ValueEnum;
 use folktime::Folktime;
 use prettytable::{format, row, Table};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
     process::Command,
@@ -22,7 +23,7 @@ pub struct Job {
     #[serde(default)]
     pub restart_strategy: JobRestartStrategy,
     #[serde(default)]
-    pub event_hooks: Vec<JobEventHook>,
+    pub event_hooks: HashMap<String, JobEventHook>,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, clap::ValueEnum, Copy, PartialEq, Eq)]
@@ -53,10 +54,11 @@ impl JobRestartStrategy {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, clap::ValueEnum)]
+#[derive(Debug, Clone, Serialize, Deserialize, ValueEnum, Default)]
 pub enum Stream {
     Stdout,
     Stderr,
+    #[default]
     Any,
 }
 
@@ -74,7 +76,7 @@ pub enum JobAction {
     Stop,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, clap::Parser)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JobEventHook {
     pub event: JobEvent,
     pub action: JobAction,
@@ -132,13 +134,13 @@ impl Job {
         Ok(())
     }
 
-    // pub fn load(name: &str) -> Result<Self> {
-    //     let jobs = Self::jobs_dir()?;
-    //     let file = std::fs::File::open(jobs.join(name))?;
-    //     let job: Job = serde_json::from_reader(file)?;
+    pub fn load(name: &str) -> Result<Self> {
+        let jobs = Self::jobs_dir()?;
+        let file = std::fs::File::open(jobs.join(name))?;
+        let job: Job = serde_json::from_reader(file)?;
 
-    //     Ok(job)
-    // }
+        Ok(job)
+    }
 
     pub fn delete(&self) -> Result<()> {
         let jobs = Self::jobs_dir()?;
