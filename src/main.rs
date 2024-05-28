@@ -110,7 +110,7 @@ async fn main() -> Result<()> {
                         job.event_hooks.insert(
                             "pfw-template-hook-1".to_string(),
                             job::JobEventHook {
-                                event: job::JobEvent::DetectedSubstring {
+                                event: job::JobEvent::DetectSubstring {
                                     contains: "error".to_string(),
                                     stream: job::Stream::Any,
                                 },
@@ -120,7 +120,7 @@ async fn main() -> Result<()> {
                         job.event_hooks.insert(
                             "pfw-template-hook-2".to_string(),
                             job::JobEventHook {
-                                event: job::JobEvent::DetectedSubstring {
+                                event: job::JobEvent::DetectSubstring {
                                     contains: "aborted".to_string(),
                                     stream: job::Stream::Any,
                                 },
@@ -160,7 +160,7 @@ async fn main() -> Result<()> {
                         }
                     }
                     args::EditJobHookCommands::Create { hook, t } => match t {
-                        args::JobHook::DetectedSubstring {
+                        args::JobHook::DetectSubstring {
                             substring,
                             stream,
                             action,
@@ -168,7 +168,7 @@ async fn main() -> Result<()> {
                             job.event_hooks.insert(
                                 hook.clone(),
                                 job::JobEventHook {
-                                    event: job::JobEvent::DetectedSubstring {
+                                    event: job::JobEvent::DetectSubstring {
                                         contains: substring,
                                         stream,
                                     },

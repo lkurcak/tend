@@ -25,7 +25,7 @@ tend create --overwrite "count" -- cmd /C "for /L %i in (1,1,10) do ((if %i==5 (
 Create a hook with name `error-hook` that detects the substring `error` in the `stderr` output of the command `count-err` and restarts the command when the substring is detected:
 
 ```sh
-tend edit "count" hook create "error-hook" detected-substring "error" restart stderr
+tend edit "count" hook create "error-hook" detect-substring --stream stderr "error" restart
 ```
 
 ## Stopping jobs
@@ -43,5 +43,5 @@ tend create --overwrite ping-1111 1.1.1.1
 Create a hook with name `stop-hook` that detects the substring `from 1.1.1.1` in the `stdout` output of the command `ping` and stops the command when the substring is detected:
 
 ```sh
-tend edit "ping-1111" hook create "stop-hook" detected-substring "from 1.1.1.1" stop stdout
+tend edit "ping-1111" hook create "stop-hook" detect-substring --stream stdout "from 1.1.1.1" stop
 ```

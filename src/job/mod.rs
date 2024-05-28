@@ -43,7 +43,7 @@ impl Job {
     fn stdout_line_callback(&self, line: &str) -> JobControlFlow {
         for hook in self.event_hooks.values() {
             let JobEventHook {
-                event: JobEvent::DetectedSubstring { stream, contains },
+                event: JobEvent::DetectSubstring { stream, contains },
                 action,
             } = hook;
 
@@ -67,7 +67,7 @@ impl Job {
     fn stderr_line_callback(&self, line: &str) -> JobControlFlow {
         for hook in self.event_hooks.values() {
             let JobEventHook {
-                event: JobEvent::DetectedSubstring { stream, contains },
+                event: JobEvent::DetectSubstring { stream, contains },
                 action,
             } = hook;
 
@@ -130,7 +130,7 @@ pub enum Stream {
 pub enum JobEvent {
     // FinishedSuccess,
     // FinishedFailure,
-    DetectedSubstring { stream: Stream, contains: String },
+    DetectSubstring { stream: Stream, contains: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ValueEnum)]

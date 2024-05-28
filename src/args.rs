@@ -191,11 +191,16 @@ pub enum EditJobHookCommands {
 
 #[derive(Clone, Debug, Subcommand)]
 pub enum JobHook {
-    DetectedSubstring {
+    DetectSubstring {
         substring: String,
         #[arg(help = "Action to take when substring is detected.")]
         action: crate::job::JobAction,
-        #[arg(help = "Stream to detect substring in.", default_value = "any")]
+        #[arg(
+            long,
+            short,
+            help = "Stream to detect substring in.",
+            default_value = "any"
+        )]
         stream: crate::job::Stream,
     },
 }
