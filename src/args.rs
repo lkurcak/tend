@@ -111,6 +111,8 @@ pub enum Commands {
             default_value = "default"
         )]
         group: String,
+        #[arg(long, short = 't', help = "Template to use for job configuration")]
+        template: Option<crate::job::JobTemplate>,
         #[arg(help = "Use -- to separate program arguments from job arguments.")]
         args: Vec<String>,
     },
@@ -191,6 +193,8 @@ pub enum EditJobHookCommands {
 pub enum JobHook {
     DetectedSubstring {
         substring: String,
+        #[arg(help = "Action to take when substring is detected.")]
+        action: crate::job::JobAction,
         #[arg(help = "Stream to detect substring in.", default_value = "any")]
         stream: crate::job::Stream,
     },

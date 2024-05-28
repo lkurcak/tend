@@ -75,8 +75,9 @@ async fn main() -> Result<()> {
             group,
             overwrite,
             restart_strategy,
+            template,
         } => {
-            let job = Job {
+            let mut job = Job {
                 name,
                 program,
                 args,
@@ -85,7 +86,51 @@ async fn main() -> Result<()> {
                 working_directory: std::env::current_dir()?,
                 restart_strategy,
                 event_hooks: HashMap::new(),
+                template,
             };
+
+            if let Some(template) = template {
+                match template {
+                    crate::job::JobTemplate::PortForward => {
+                        // @note: Examples of errors from `kubectl port-forward`:
+                        // E0515 11:45:17.837897   23508 portforward.go:372] error copying from remote stream to local connection: readfrom tcp4 127.0.0.1:8443->127.0.0.1:50656: write tcp4 127.0.0.1:8443->127.0.0.1:50656: wsasend: An established connection was aborted by the software in your host machine.
+                        // E0515 11:45:51.137714   23508 portforward.go:340] error creating error stream for port 8443 -> 8443: Timeout occurred
+                        // E0515 11:45:51.293626   23508 portforward.go:362] error creating forwarding stream for port 8443 -> 8443: Timeout occurred
+                        // E0515 11:45:52.013842   23508 portforward.go:362] error creating forwarding stream for port 8443 -> 8443: Timeout occurred
+                        // E0515 11:46:53.524413   23508 portforward.go:400] an error occurred forwarding 8443 -> 8443: error forwarding port 8443 to pod 20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e, uid : failed to execute portforward in network namespace "/var/run/netns/cni-d0e0bbba-6286-aba6-45a1-fa24e0e614e2": failed to connect to localhost:8443 inside namespace "20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e", IPv4: dial tcp4 127.0.0.1:8443: connect: connection refused IPv6 dial tcp6: address localhost: no suitable address found
+                        // E0515 11:46:53.608922   23508 portforward.go:400] an error occurred forwarding 8443 -> 8443: error forwarding port 8443 to pod 20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e, uid : failed to execute portforward in network namespace "/var/run/netns/cni-d0e0bbba-6286-aba6-45a1-fa24e0e614e2": failed to connect to localhost:8443 inside namespace "20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e", IPv4: dial tcp4 127.0.0.1:8443: connect: connection refused IPv6 dial tcp6: address localhost: no suitable address found
+                        // E0515 11:47:03.229256   23508 portforward.go:340] error creating error stream for port 8443 -> 8443: Timeout occurred
+                        // E0515 11:47:07.613031   23508 portforward.go:340] error creating error stream for port 8443 -> 8443: Timeout occurred
+                        // E0515 11:47:23.206203   23508 portforward.go:340] error creating error stream for port 8443 -> 8443: Timeout occurred
+                        // E0515 11:47:23.409211   23508 portforward.go:362] error creating forwarding stream for port 8443 -> 8443: Timeout occurred
+                        // E0515 11:47:23.786188   23508 portforward.go:400] an error occurred forwarding 8443 -> 8443: error forwarding port 8443 to pod 20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e, uid : network namespace for sandbox "20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e" is closed
+                        // E0515 11:47:23.973797   23508 portforward.go:362] error creating forwarding stream for port 8443 -> 8443: Timeout occurred
+                        // E0515 11:47:24.066781   23508 portforward.go:362] error creating forwarding stream for port 8443 -> 8443: Timeout occurred
+                        // E0515 11:47:37.957485   23508 portforward.go:340] error creating error stream for port 8443 -> 8443: Timeout occurred
+                        job.event_hooks.insert(
+                            "pfw-template-hook-1".to_string(),
+                            job::JobEventHook {
+                                event: job::JobEvent::DetectedSubstring {
+                                    contains: "error".to_string(),
+                                    stream: job::Stream::Any,
+                                },
+                                action: job::JobAction::Restart,
+                            },
+                        );
+                        job.event_hooks.insert(
+                            "pfw-template-hook-2".to_string(),
+                            job::JobEventHook {
+                                event: job::JobEvent::DetectedSubstring {
+                                    contains: "aborted".to_string(),
+                                    stream: job::Stream::Any,
+                                },
+                                action: job::JobAction::Restart,
+                            },
+                        );
+                    }
+                }
+            }
+
             let res = job.save(overwrite);
             if let Err(ref error) = res {
                 if let Some(error) = error.downcast_ref::<std::io::Error>() {
@@ -115,7 +160,11 @@ async fn main() -> Result<()> {
                         }
                     }
                     args::EditJobHookCommands::Create { hook, t } => match t {
-                        args::JobHook::DetectedSubstring { substring, stream } => {
+                        args::JobHook::DetectedSubstring {
+                            substring,
+                            stream,
+                            action,
+                        } => {
                             job.event_hooks.insert(
                                 hook.clone(),
                                 job::JobEventHook {
@@ -123,7 +172,7 @@ async fn main() -> Result<()> {
                                         contains: substring,
                                         stream,
                                     },
-                                    action: job::JobAction::Restart,
+                                    action,
                                 },
                             );
                         }

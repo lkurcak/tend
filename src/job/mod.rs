@@ -24,6 +24,69 @@ pub struct Job {
     pub restart_strategy: JobRestartStrategy,
     #[serde(default)]
     pub event_hooks: HashMap<String, JobEventHook>,
+    #[serde(default)]
+    pub template: Option<JobTemplate>,
+}
+
+#[derive(Copy, Clone, Debug, ValueEnum, Serialize, Deserialize)]
+pub enum JobTemplate {
+    PortForward,
+}
+
+enum JobControlFlow {
+    Nothing,
+    RestartCommand,
+    StopJob,
+}
+
+impl Job {
+    fn stdout_line_callback(&self, line: &str) -> JobControlFlow {
+        for hook in self.event_hooks.values() {
+            let JobEventHook {
+                event: JobEvent::DetectedSubstring { stream, contains },
+                action,
+            } = hook;
+
+            let detection = match stream {
+                Stream::Stdout => line.contains(contains),
+                Stream::Stderr => false,
+                Stream::Any => line.contains(contains),
+            };
+
+            if detection {
+                match action {
+                    JobAction::Restart => return JobControlFlow::RestartCommand,
+                    JobAction::Stop => return JobControlFlow::StopJob,
+                }
+            }
+        }
+
+        JobControlFlow::Nothing
+    }
+
+    fn stderr_line_callback(&self, line: &str) -> JobControlFlow {
+        for hook in self.event_hooks.values() {
+            let JobEventHook {
+                event: JobEvent::DetectedSubstring { stream, contains },
+                action,
+            } = hook;
+
+            let detection = match stream {
+                Stream::Stdout => false,
+                Stream::Stderr => line.contains(contains),
+                Stream::Any => line.contains(contains),
+            };
+
+            if detection {
+                match action {
+                    JobAction::Restart => return JobControlFlow::RestartCommand,
+                    JobAction::Stop => return JobControlFlow::StopJob,
+                }
+            }
+        }
+
+        JobControlFlow::Nothing
+    }
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, clap::ValueEnum, Copy, PartialEq, Eq)]
@@ -70,7 +133,7 @@ pub enum JobEvent {
     DetectedSubstring { stream: Stream, contains: String },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, clap::Parser)]
+#[derive(Debug, Clone, Serialize, Deserialize, ValueEnum)]
 pub enum JobAction {
     Restart,
     Stop,
@@ -258,12 +321,40 @@ impl Job {
                     stdout_line = stdout.next_line() => {
                         if let Some(line) = stdout_line? {
                             println!("{}{}", format!("{}: ", self.name).job(), line);
+
+                            match self.stdout_line_callback(&line) {
+                                JobControlFlow::Nothing => (),
+                                JobControlFlow::RestartCommand => {
+                                    println!("{} restarting", self.name.job());
+                                    process.kill().await?;
+                                    break 'process;
+                                },
+                                JobControlFlow::StopJob => {
+                                    println!("{} stopping", self.name.job());
+                                    process.kill().await?;
+                                    break 'job;
+                                },
+                            };
                         }
                         continue 'process;
                     }
                     stderr_line = stderr.next_line() => {
                         if let Some(line) = stderr_line? {
                             println!("{}{}{}{}", self.name.job(), " (stderr)".failure(), ": ".job(), line);
+
+                            match self.stderr_line_callback(&line) {
+                                JobControlFlow::Nothing => (),
+                                JobControlFlow::RestartCommand => {
+                                    println!("{} restarting", self.name.job());
+                                    process.kill().await?;
+                                    break 'process;
+                                },
+                                JobControlFlow::StopJob => {
+                                    println!("{} stopping", self.name.job());
+                                    process.kill().await?;
+                                    break 'job;
+                                },
+                            };
                         }
                         continue 'process;
                     }
