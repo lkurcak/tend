@@ -111,8 +111,17 @@ pub enum Commands {
             default_value = "default"
         )]
         group: String,
+        #[arg(long, short = 't', help = "Template to use for job configuration")]
+        template: Option<crate::job::JobTemplate>,
         #[arg(help = "Use -- to separate program arguments from job arguments.")]
         args: Vec<String>,
+    },
+    #[command(alias = "e", alias = "ed", about = "Edit a job")]
+    Edit {
+        #[arg(help = "Name of the job to edit", exclusive = true)]
+        name: String,
+        #[command(subcommand)]
+        command: EditJobCommands,
     },
     #[command(alias = "d", alias = "rm", about = "Delete jobs")]
     #[clap(group(clap::ArgGroup::new("input").required(true).args(&["name", "group", "job", "all"])))]
@@ -149,5 +158,49 @@ pub enum Commands {
         exclude: Vec<String>,
         #[arg(short, long, help = "Confirm delete action")]
         confirm: bool,
+    },
+}
+
+#[derive(Clone, Debug, Subcommand)]
+pub enum EditJobCommands {
+    #[command(about = "Change the group of a job")]
+    Group {
+        #[arg(help = "New group name")]
+        group: String,
+    },
+    Hook {
+        #[command(subcommand)]
+        command: EditJobHookCommands,
+    },
+}
+
+#[derive(Clone, Debug, Subcommand)]
+pub enum EditJobHookCommands {
+    List,
+    Create {
+        #[arg(help = "Name of the hook to create")]
+        hook: String,
+        #[command(subcommand)]
+        t: JobHook,
+    },
+    Delete {
+        #[arg(help = "Name of the hook to delete")]
+        hook: String,
+    },
+}
+
+#[derive(Clone, Debug, Subcommand)]
+pub enum JobHook {
+    DetectSubstring {
+        substring: String,
+        #[arg(help = "Action to take when substring is detected.")]
+        action: crate::job::JobAction,
+        #[arg(
+            long,
+            short,
+            help = "Stream to detect substring in.",
+            default_value = "any"
+        )]
+        stream: crate::job::Stream,
     },
 }
