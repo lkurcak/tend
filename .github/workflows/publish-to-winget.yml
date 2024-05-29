@@ -20,5 +20,6 @@ jobs:
         with:
           identifier: lubomirkurcak.tend
           version: ${{ inputs.tag_name || github.event.release.tag_name }}
+          installers-regex: .*windows.*\.zip$
           release-tag: ${{ inputs.tag_name || github.event.release.tag_name }}
           token: ${{ secrets.WINGET_PAT }}
