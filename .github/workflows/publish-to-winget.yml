@@ -1,0 +1,24 @@
+name: winget
+
+on:
+  release:
+    types: [released]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Specific tag name'
+        required: true
+        type: string
+
+jobs:
+  winget:
+    name: Publish winget package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Submit package to Windows Package Manager Community Repository
+        uses: vedantmgoyal2009/winget-releaser@v2
+        with:
+          identifier: lubomirkurcak.tend
+          version: ${{ inputs.tag_name || github.event.release.tag_name }}
+          release-tag: ${{ inputs.tag_name || github.event.release.tag_name }}
+          token: ${{ secrets.WINGET_PAT }}
