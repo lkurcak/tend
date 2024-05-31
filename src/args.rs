@@ -95,7 +95,7 @@ pub enum Commands {
         program: String,
         #[arg(
             long,
-            default_value = "on-failure",
+            default_value = "always",
             short = 'r',
             help = "Restart condition"
         )]
