@@ -1,6 +1,7 @@
 use colored::{ColoredString, Colorize};
 
-pub trait TendColors {
+pub trait Tend {
+    fn thick(&self) -> ColoredString;
     fn job(&self) -> ColoredString;
     fn program(&self) -> ColoredString;
     fn time_value(&self) -> ColoredString;
@@ -8,7 +9,11 @@ pub trait TendColors {
     fn failure(&self) -> ColoredString;
 }
 
-impl TendColors for str {
+impl Tend for str {
+    fn thick(&self) -> ColoredString {
+        self.bold()
+    }
+
     fn job(&self) -> ColoredString {
         self.bold().cyan()
     }

@@ -1,10 +1,9 @@
-use crate::{job::JobFilter, Job};
-use std::collections::HashMap;
+use crate::{job::filter::Filter, Job};
 use tokio::sync::mpsc;
 
-pub async fn run(job_filter: JobFilter, verbose: bool) -> anyhow::Result<()> {
-    let mut join_handles = HashMap::new();
-    let mut cancel_handles = HashMap::new();
+pub async fn run(job_filter: Filter, verbose: bool) -> anyhow::Result<()> {
+    let mut join_set = tokio::task::JoinSet::new();
+    let mut cancel_handles = vec![];
 
     let mut count = 0;
 
@@ -13,9 +12,8 @@ pub async fn run(job_filter: JobFilter, verbose: bool) -> anyhow::Result<()> {
             count += 1;
 
             let (tx, rx) = mpsc::channel::<()>(1);
-            let handle = tokio::spawn(job.clone().create_repeated_process(rx, verbose));
-            cancel_handles.insert(job.name.clone(), tx);
-            join_handles.insert(job.name.clone(), handle);
+            cancel_handles.push(tx);
+            join_set.spawn(job.create_repeated_process(rx, verbose));
         },
         &job_filter,
     )?;
@@ -24,14 +22,23 @@ pub async fn run(job_filter: JobFilter, verbose: bool) -> anyhow::Result<()> {
         anyhow::bail!("No jobs matched.");
     }
 
-    tokio::select! {
-        _ = tokio::signal::ctrl_c() => {
-            for (_name, tx) in cancel_handles {
-                let _ = tx.send(()).await;
+    loop {
+        tokio::select! {
+            a = join_set.join_next() => {
+                if a.is_none() {
+                    if verbose {
+                        println!("All jobs finished.");
+                    }
+                    break;
+                }
             }
 
-            for (_name, handle) in join_handles {
-                let _ = handle.await;
+            _ = tokio::signal::ctrl_c() => {
+                for tx in &cancel_handles {
+                    let _ = tx.send(()).await;
+                }
+
+                join_set.shutdown().await;
             }
         }
     }

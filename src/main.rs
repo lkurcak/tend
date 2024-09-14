@@ -1,12 +1,97 @@
+#![forbid(unsafe_code)]
+#![forbid(clippy::float_arithmetic)]
+#![forbid(future_incompatible)]
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
+#![deny(clippy::nursery)]
+#![warn(clippy::cargo)]
+#![deny(missing_debug_implementations)]
+#![deny(unused_imports)]
+#![deny(unused_variables)]
+#![deny(dead_code)]
+#![deny(unreachable_code)]
+#![deny(unused_mut)]
+#![warn(
+    clippy::all,
+    clippy::await_holding_lock,
+    clippy::char_lit_as_u8,
+    clippy::checked_conversions,
+    clippy::dbg_macro,
+    clippy::debug_assert_with_mut_call,
+    clippy::doc_markdown,
+    clippy::empty_enum,
+    clippy::enum_glob_use,
+    clippy::exit,
+    clippy::expl_impl_clone_on_copy,
+    clippy::explicit_deref_methods,
+    clippy::explicit_into_iter_loop,
+    clippy::fallible_impl_from,
+    clippy::filter_map_next,
+    clippy::flat_map_option,
+    clippy::float_cmp_const,
+    clippy::fn_params_excessive_bools,
+    clippy::from_iter_instead_of_collect,
+    clippy::if_let_mutex,
+    clippy::implicit_clone,
+    clippy::imprecise_flops,
+    clippy::inefficient_to_string,
+    clippy::invalid_upcast_comparisons,
+    clippy::large_digit_groups,
+    clippy::large_stack_arrays,
+    clippy::large_types_passed_by_value,
+    clippy::let_unit_value,
+    clippy::linkedlist,
+    clippy::lossy_float_literal,
+    clippy::macro_use_imports,
+    clippy::manual_ok_or,
+    clippy::map_err_ignore,
+    clippy::map_flatten,
+    clippy::map_unwrap_or,
+    clippy::match_on_vec_items,
+    clippy::match_same_arms,
+    clippy::match_wild_err_arm,
+    clippy::match_wildcard_for_single_variants,
+    clippy::mem_forget,
+    clippy::mismatched_target_os,
+    clippy::missing_enforced_import_renames,
+    clippy::mut_mut,
+    clippy::mutex_integer,
+    clippy::needless_borrow,
+    clippy::needless_continue,
+    clippy::needless_for_each,
+    clippy::option_option,
+    clippy::path_buf_push_overwrite,
+    clippy::ptr_as_ptr,
+    clippy::rc_mutex,
+    clippy::ref_option_ref,
+    clippy::rest_pat_in_fully_bound_structs,
+    clippy::same_functions_in_if_condition,
+    clippy::semicolon_if_nothing_returned,
+    clippy::single_match_else,
+    clippy::string_add_assign,
+    clippy::string_add,
+    clippy::string_lit_as_bytes,
+    clippy::string_to_string,
+    clippy::todo,
+    clippy::trait_duplication_in_bounds,
+    clippy::unimplemented,
+    clippy::unnested_or_patterns,
+    clippy::unused_self,
+    clippy::useless_transmute,
+    clippy::verbose_file_reads,
+    clippy::zero_sized_map_values,
+    nonstandard_style,
+    rust_2018_idioms
+)]
 use std::collections::HashMap;
 
-use crate::colors::TendColors;
+use crate::colors::Tend;
 mod args;
 mod colors;
 mod job;
 mod run;
 
-use crate::job::{Job, JobFilter};
+use crate::job::{filter::Filter, Job};
 use anyhow::Result;
 use clap::Parser;
 
@@ -16,19 +101,19 @@ fn standard_job_filter(
     group: Vec<String>,
     job: Vec<String>,
     exclude: Vec<String>,
-) -> JobFilter {
+) -> Filter {
     if group.is_empty() && job.is_empty() {
         if let Some(name) = name {
-            JobFilter::Subset {
+            Filter::Subset {
                 groups: vec![],
                 jobs: vec![name],
                 exclude,
             }
         } else {
-            JobFilter::All { exclude }
+            Filter::All { exclude }
         }
     } else {
-        JobFilter::Subset {
+        Filter::Subset {
             groups: group,
             jobs: job,
             exclude,
@@ -37,6 +122,7 @@ fn standard_job_filter(
 }
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> Result<()> {
     let args = args::Cli::parse();
 
@@ -54,7 +140,10 @@ async fn main() -> Result<()> {
         } => {
             let filter = standard_job_filter(name, all, group, job, exclude);
 
-            Job::list(filter)?;
+            match Job::list(&filter) {
+                Ok(()) => (),
+                Err(e) => eprintln!("Error: {e}"),
+            }
         }
         args::Commands::Run {
             name,
@@ -90,45 +179,7 @@ async fn main() -> Result<()> {
             };
 
             if let Some(template) = template {
-                match template {
-                    crate::job::JobTemplate::PortForward => {
-                        // @note: Examples of errors from `kubectl port-forward`:
-                        // E0515 11:45:17.837897   23508 portforward.go:372] error copying from remote stream to local connection: readfrom tcp4 127.0.0.1:8443->127.0.0.1:50656: write tcp4 127.0.0.1:8443->127.0.0.1:50656: wsasend: An established connection was aborted by the software in your host machine.
-                        // E0515 11:45:51.137714   23508 portforward.go:340] error creating error stream for port 8443 -> 8443: Timeout occurred
-                        // E0515 11:45:51.293626   23508 portforward.go:362] error creating forwarding stream for port 8443 -> 8443: Timeout occurred
-                        // E0515 11:45:52.013842   23508 portforward.go:362] error creating forwarding stream for port 8443 -> 8443: Timeout occurred
-                        // E0515 11:46:53.524413   23508 portforward.go:400] an error occurred forwarding 8443 -> 8443: error forwarding port 8443 to pod 20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e, uid : failed to execute portforward in network namespace "/var/run/netns/cni-d0e0bbba-6286-aba6-45a1-fa24e0e614e2": failed to connect to localhost:8443 inside namespace "20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e", IPv4: dial tcp4 127.0.0.1:8443: connect: connection refused IPv6 dial tcp6: address localhost: no suitable address found
-                        // E0515 11:46:53.608922   23508 portforward.go:400] an error occurred forwarding 8443 -> 8443: error forwarding port 8443 to pod 20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e, uid : failed to execute portforward in network namespace "/var/run/netns/cni-d0e0bbba-6286-aba6-45a1-fa24e0e614e2": failed to connect to localhost:8443 inside namespace "20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e", IPv4: dial tcp4 127.0.0.1:8443: connect: connection refused IPv6 dial tcp6: address localhost: no suitable address found
-                        // E0515 11:47:03.229256   23508 portforward.go:340] error creating error stream for port 8443 -> 8443: Timeout occurred
-                        // E0515 11:47:07.613031   23508 portforward.go:340] error creating error stream for port 8443 -> 8443: Timeout occurred
-                        // E0515 11:47:23.206203   23508 portforward.go:340] error creating error stream for port 8443 -> 8443: Timeout occurred
-                        // E0515 11:47:23.409211   23508 portforward.go:362] error creating forwarding stream for port 8443 -> 8443: Timeout occurred
-                        // E0515 11:47:23.786188   23508 portforward.go:400] an error occurred forwarding 8443 -> 8443: error forwarding port 8443 to pod 20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e, uid : network namespace for sandbox "20919150d2fddf20d4b94e389744ffde70ae784debf216326d58c7dd0d79401e" is closed
-                        // E0515 11:47:23.973797   23508 portforward.go:362] error creating forwarding stream for port 8443 -> 8443: Timeout occurred
-                        // E0515 11:47:24.066781   23508 portforward.go:362] error creating forwarding stream for port 8443 -> 8443: Timeout occurred
-                        // E0515 11:47:37.957485   23508 portforward.go:340] error creating error stream for port 8443 -> 8443: Timeout occurred
-                        job.event_hooks.insert(
-                            "pfw-template-hook-1".to_string(),
-                            job::JobEventHook {
-                                event: job::JobEvent::DetectSubstring {
-                                    contains: "error".to_string(),
-                                    stream: job::Stream::Any,
-                                },
-                                action: job::JobAction::Restart,
-                            },
-                        );
-                        job.event_hooks.insert(
-                            "pfw-template-hook-2".to_string(),
-                            job::JobEventHook {
-                                event: job::JobEvent::DetectSubstring {
-                                    contains: "aborted".to_string(),
-                                    stream: job::Stream::Any,
-                                },
-                                action: job::JobAction::Restart,
-                            },
-                        );
-                    }
-                }
+                job.apply_template(template);
             }
 
             let res = job.save(overwrite);
@@ -146,7 +197,8 @@ async fn main() -> Result<()> {
             res?;
         }
         args::Commands::Edit { name, command } => {
-            let mut job = Job::load(&name)?;
+            let mut job =
+                Job::load(&name).ok_or_else(|| anyhow::anyhow!("Job could not be loaded."))?;
             match command {
                 args::EditJobCommands::Group { group } => job.group = group,
                 args::EditJobCommands::Hook { command } => match command {
@@ -154,8 +206,8 @@ async fn main() -> Result<()> {
                         if job.event_hooks.is_empty() {
                             println!("No hooks defined for job {}", job.name);
                         } else {
-                            for (name, hook) in job.event_hooks.iter() {
-                                println!("{}: {:?}", name, hook);
+                            for (name, hook) in &job.event_hooks {
+                                println!("{name}: {hook:?}");
                             }
                         }
                     }
@@ -166,9 +218,9 @@ async fn main() -> Result<()> {
                             action,
                         } => {
                             job.event_hooks.insert(
-                                hook.clone(),
-                                job::JobEventHook {
-                                    event: job::JobEvent::DetectSubstring {
+                                hook,
+                                job::event::Hook {
+                                    event: job::event::Event::DetectSubstring {
                                         contains: substring,
                                         stream,
                                     },
@@ -179,8 +231,8 @@ async fn main() -> Result<()> {
                     },
                     args::EditJobHookCommands::Delete { hook } => {
                         match job.event_hooks.remove(&hook) {
-                            Some(_) => println!("Hook {} deleted", hook),
-                            None => eprintln!("Hook {} not found", hook),
+                            Some(_) => println!("Hook {hook} deleted"),
+                            None => eprintln!("Hook {hook} not found"),
                         }
                     }
                 },
