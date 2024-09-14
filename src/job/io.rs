@@ -1,4 +1,4 @@
-use super::*;
+use super::{filter, Job};
 use crate::colors::Tend;
 use anyhow::Result;
 use prettytable::{format, row, Table};
