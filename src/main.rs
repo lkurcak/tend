@@ -1,5 +1,5 @@
 #![forbid(unsafe_code)]
-#![forbid(clippy::float_arithmetic)]
+// #![forbid(clippy::float_arithmetic)]
 #![forbid(future_incompatible)]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
