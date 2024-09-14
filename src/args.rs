@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-use crate::job::{JobRestartBehavior, JobRestartStrategy};
+use crate::job::event::{RestartBehavior, RestartStrategy};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -99,9 +99,9 @@ pub enum Commands {
             short = 'r',
             help = "Restart condition"
         )]
-        restart: JobRestartBehavior,
+        restart: RestartBehavior,
         #[arg(long, default_value = "exponential-backoff", help = "Restart strategy")]
-        restart_strategy: JobRestartStrategy,
+        restart_strategy: RestartStrategy,
         #[arg(long, short = 'w', help = "Overwrite existing job with the same name")]
         overwrite: bool,
         #[arg(
@@ -112,13 +112,13 @@ pub enum Commands {
         )]
         group: String,
         #[arg(long, short = 't', help = "Template to use for job configuration")]
-        template: Option<crate::job::JobTemplate>,
+        template: Option<crate::job::template::Template>,
         #[arg(help = "Use -- to separate program arguments from job arguments.")]
         args: Vec<String>,
     },
     #[command(alias = "e", alias = "ed", about = "Edit a job")]
     Edit {
-        #[arg(help = "Name of the job to edit", exclusive = true)]
+        #[arg(help = "Name of the job to edit")]
         name: String,
         #[command(subcommand)]
         command: EditJobCommands,
@@ -194,13 +194,13 @@ pub enum JobHook {
     DetectSubstring {
         substring: String,
         #[arg(help = "Action to take when substring is detected.")]
-        action: crate::job::JobAction,
+        action: crate::job::event::Action,
         #[arg(
             long,
             short,
             help = "Stream to detect substring in.",
             default_value = "any"
         )]
-        stream: crate::job::Stream,
+        stream: crate::job::event::Stream,
     },
 }
