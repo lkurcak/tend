@@ -73,7 +73,6 @@
     clippy::string_to_string,
     clippy::todo,
     clippy::trait_duplication_in_bounds,
-    clippy::unexpected_cfgs,
     clippy::unimplemented,
     clippy::unnested_or_patterns,
     clippy::unused_self,
@@ -81,7 +80,8 @@
     clippy::verbose_file_reads,
     clippy::zero_sized_map_values,
     nonstandard_style,
-    rust_2018_idioms
+    rust_2018_idioms,
+    unexpected_cfgs
 )]
 use std::collections::HashMap;
 
