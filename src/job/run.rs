@@ -1,24 +1,21 @@
 use super::{
-    AsyncBufReadExt, BufReader, ChildStderr, ChildStdout, Command, ControlFlow, Folktime, Job,
-    Lines, Receiver, Result, Tend,
+    AsyncBufReadExt, BufReader, ChildStderr, ChildStdout, ControlFlow, Folktime, Job, Lines,
+    Receiver, Result, Tend,
 };
 
-impl Job {
-    fn create_command(&self) -> Command {
-        let mut command = Command::new(&self.program);
-        command.current_dir(&self.working_directory);
-        command.args(&self.args);
-        command
-    }
+use process_wrap::tokio::*;
 
+impl Job {
     async fn wait_for_something(
         &self,
-        process: &mut tokio::process::Child,
+        process: &mut Box<dyn TokioChildWrapper>,
         rx: &mut Receiver<()>,
         verbose: bool,
         stdout: &mut Lines<BufReader<ChildStdout>>,
         stderr: &mut Lines<BufReader<ChildStderr>>,
     ) -> Result<ControlFlow> {
+        let process: &mut tokio::process::Child = process.inner_mut();
+
         tokio::select! {
             stdout_line = stdout.next_line() => {
                 if let Some(line) = stdout_line? {
@@ -76,25 +73,35 @@ impl Job {
     }
 
     pub async fn create_repeated_process(self, mut rx: Receiver<()>, verbose: bool) -> Result<()> {
-        let mut command = self.create_command();
-
-        // let mut successes = 0;
-        // let mut failures = 0;
         let mut backoff_restart_count = 0;
 
         'job: loop {
+            let mut command = TokioCommandWrap::with_new(&self.program, |command| {
+                command
+                    .current_dir(&self.working_directory)
+                    .args(&self.args)
+                    .stdout(std::process::Stdio::piped())
+                    .stderr(std::process::Stdio::piped());
+            });
+            #[cfg(unix)]
+            {
+                command.wrap(ProcessGroup::leader());
+            }
+            #[cfg(windows)]
+            {
+                command.wrap(JobObject);
+            }
+
+            let mut process = command.spawn()?;
+
             if verbose {
                 println!("{} starting", self.name.job(),);
             }
             let start_time = std::time::Instant::now();
-            let mut process = command
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped())
-                .spawn()?;
 
             let mut stdout = BufReader::new(
                 process
-                    .stdout
+                    .stdout()
                     .take()
                     .ok_or_else(|| anyhow::anyhow!("Could not get stdout"))?,
             )
@@ -102,7 +109,7 @@ impl Job {
 
             let mut stderr = BufReader::new(
                 process
-                    .stderr
+                    .stderr()
                     .take()
                     .ok_or_else(|| anyhow::anyhow!("Could not get stderr"))?,
             )
@@ -133,8 +140,6 @@ impl Job {
                 match control {
                     ControlFlow::Nothing => (),
                     ControlFlow::RestartCommand => {
-                        let _ = process.kill().await;
-
                         let delay_seconds =
                             self.restart_strategy.delay_seconds(backoff_restart_count);
                         if delay_seconds != 0 {
@@ -144,8 +149,10 @@ impl Job {
                             );
                             tokio::time::sleep(tokio::time::Duration::from_secs(delay_seconds))
                                 .await;
+                            self.terminate_process(&mut process, verbose).await?;
                         } else {
                             println!(" (restarting)");
+                            self.terminate_process(&mut process, verbose).await?;
                         }
 
                         backoff_restart_count += 1;
@@ -158,12 +165,33 @@ impl Job {
                         } else {
                             println!();
                         }
-                        let _ = process.kill().await;
+                        self.terminate_process(&mut process, verbose).await?;
                         break 'job;
                     }
                 }
             }
         }
+
+        Ok(())
+    }
+
+    async fn terminate_process(
+        &self,
+        process: &mut Box<dyn TokioChildWrapper>,
+        verbose: bool,
+    ) -> Result<()> {
+        if verbose {
+            println!("{} terminating process", self.name.job());
+        }
+
+        if let Err(e) = process.start_kill() {
+            eprintln!("{} failed to send SIGTERM: {}", self.name.job(), e);
+        }
+
+        if verbose {
+            println!("{} waiting for process to terminate", self.name.job());
+        }
+        process.wait();
 
         Ok(())
     }
