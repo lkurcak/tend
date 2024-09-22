@@ -3,7 +3,7 @@ use super::{
     Receiver, Result, Tend,
 };
 
-use process_wrap::tokio::*;
+use process_wrap::tokio::{JobObject, TokioChildWrapper, TokioCommandWrap};
 
 impl Job {
     async fn wait_for_something(
