@@ -3,7 +3,7 @@ use super::{
     Receiver, Result, Tend,
 };
 
-use process_wrap::tokio::{JobObject, TokioChildWrapper, TokioCommandWrap};
+use process_wrap::tokio::{TokioChildWrapper, TokioCommandWrap};
 
 impl Job {
     async fn wait_for_something(
@@ -85,11 +85,11 @@ impl Job {
             });
             #[cfg(unix)]
             {
-                command.wrap(ProcessGroup::leader());
+                command.wrap(process_wrap::tokio::ProcessGroup::leader());
             }
             #[cfg(windows)]
             {
-                command.wrap(JobObject);
+                command.wrap(process_wrap::tokio::JobObject);
             }
 
             let mut process = command.spawn()?;
@@ -191,7 +191,9 @@ impl Job {
         if verbose {
             println!("{} waiting for process to terminate", self.name.job());
         }
-        process.wait();
+
+        let wait_future = Box::into_pin(process.wait());
+        wait_future.await?;
 
         Ok(())
     }
