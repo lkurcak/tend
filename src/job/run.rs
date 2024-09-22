@@ -83,10 +83,9 @@ impl Job {
                     .stdout(std::process::Stdio::piped())
                     .stderr(std::process::Stdio::piped());
             });
-            #[cfg(unix)]
-            {
-                command.wrap(process_wrap::tokio::ProcessGroup::leader());
-            }
+            // NOTE: this actually made the subprocesses detach when tested on Ubuntu :D
+            //#[cfg(unix)]
+            //{ command.wrap(process_wrap::tokio::ProcessGroup::leader()); }
             #[cfg(windows)]
             {
                 command.wrap(process_wrap::tokio::JobObject);
