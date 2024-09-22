@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
 use tokio::{
     io::{AsyncBufReadExt, BufReader, Lines},
-    process::{ChildStderr, ChildStdout, Command},
+    process::{ChildStderr, ChildStdout},
     sync::mpsc::Receiver,
 };
 
