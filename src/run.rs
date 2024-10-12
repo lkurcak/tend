@@ -16,6 +16,8 @@ pub async fn run(job_filter: Filter, verbose: bool) -> anyhow::Result<()> {
             join_set.spawn(job.create_repeated_process(rx, verbose));
         },
         &job_filter,
+        false,
+        verbose,
     )?;
 
     if count == 0 {

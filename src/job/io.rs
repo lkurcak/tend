@@ -27,7 +27,7 @@ impl Job {
         Ok(())
     }
 
-    pub fn load(name: &str) -> Option<Self> {
+    pub fn load(name: &str, verbose: bool) -> Option<Self> {
         let jobs = Self::jobs_dir().ok()?;
         let file = std::fs::File::open(jobs.join(name)).ok()?;
 
@@ -41,20 +41,74 @@ impl Job {
                 Some(job)
             }
             Err(e) => {
-                eprintln!("Error loading {}: {}", name.job(), e.to_string().failure());
+                eprintln!("{} {}: {}", name.job(), "could not be loaded".failure(), e);
+                if verbose {
+                    eprintln!(
+                        "{} is located at: {}",
+                        name.job(),
+                        jobs.join(name).display()
+                    );
+                }
                 None
             }
         }
     }
 
-    pub fn delete(&self) -> Result<()> {
+    pub fn delete_all_unchecked() -> Result<()> {
         let jobs = Self::jobs_dir()?;
-        std::fs::remove_file(jobs.join(&self.name))?;
+        for entry in std::fs::read_dir(jobs)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() {
+                std::fs::remove_file(path)?;
+            }
+        }
 
         Ok(())
     }
 
-    pub fn iterate_jobs_filtered<F>(mut f: F, filter: &filter::Filter) -> Result<()>
+    pub fn delete_unchecked(name: &str) -> Result<()> {
+        let jobs = Self::jobs_dir()?;
+        std::fs::remove_file(jobs.join(name))?;
+
+        Ok(())
+    }
+
+    pub fn delete(&self) -> Result<()> {
+        Self::delete_unchecked(&self.name)
+    }
+
+    pub fn iterate_job_names_filtered<F>(
+        mut f: F,
+        filter: &filter::Filter,
+        _verbose: bool,
+    ) -> Result<()>
+    where
+        F: FnMut(&str),
+    {
+        let jobs = Self::jobs_dir()?;
+        for entry in std::fs::read_dir(jobs)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() {
+                let Some(job_name) = path.file_name().unwrap().to_str() else {
+                    continue;
+                };
+                if filter.matches_name(job_name) {
+                    f(job_name);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn iterate_jobs_filtered<F>(
+        mut f: F,
+        filter: &filter::Filter,
+        include_disabled: bool,
+        verbose: bool,
+    ) -> Result<()>
     where
         F: FnMut(Self),
     {
@@ -63,31 +117,39 @@ impl Job {
             let entry = entry?;
             let path = entry.path();
             if path.is_file() {
-                let Some(job) = Self::load(path.file_name().unwrap().to_str().unwrap()) else {
+                let name = path.file_name().unwrap().to_str().unwrap();
+                let Some(job) = Self::load(name, verbose) else {
                     continue;
                 };
-                if filter.matches(&job) {
-                    f(job);
+
+                if !include_disabled && !job.enabled {
+                    continue;
                 }
+
+                if !filter.matches(&job) {
+                    continue;
+                }
+
+                f(job);
             }
         }
 
         Ok(())
     }
 
-    pub fn list(job_filter: &filter::Filter) -> Result<()> {
+    pub fn list(job_filter: &filter::Filter, verbose: bool) -> Result<()> {
         let jobs = Self::jobs_dir()?;
         let mut table = Table::new();
-        table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
-        //table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
+        table.set_format(*format::consts::FORMAT_CLEAN);
 
-        table.set_titles(row![
-            "Job",
-            "Program",
-            "Args",
-            "Working Directory",
-            "Restart",
-            "Group"
+        table.set_titles(row![FB =>
+            "ENABLED",
+            "JOB",
+            "PROGRAM",
+            "ARGS",
+            "WORKING DIRECTORY",
+            "RESTART",
+            "GROUP",
         ]);
 
         for entry in std::fs::read_dir(jobs)? {
@@ -95,7 +157,7 @@ impl Job {
             let path = entry.path();
             if path.is_file() {
                 let name = path.file_name().unwrap().to_str().unwrap();
-                let Some(job) = Self::load(name) else {
+                let Some(job) = Self::load(name, verbose) else {
                     continue;
                 };
 
@@ -104,8 +166,9 @@ impl Job {
                 }
 
                 table.add_row(row![
-                    job.name.job(),
-                    job.program.program(),
+                    r->if job.enabled { "*" } else { " " },
+                    bFC->&job.name,
+                    bFY->&job.program,
                     job.args.join(" "),
                     job.working_directory.display(),
                     job.restart_behaviour(),

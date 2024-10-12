@@ -8,7 +8,7 @@ use crate::{colors::Tend, job::event::ControlFlow};
 use anyhow::Result;
 use folktime::Folktime;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf};
+use std::path::PathBuf;
 use tokio::{
     io::{AsyncBufReadExt, BufReader, Lines},
     process::{ChildStderr, ChildStdout},
@@ -21,6 +21,8 @@ use self::event::{Hook, RestartBehavior, RestartStrategy};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Job {
     pub name: String,
+    #[serde(default = "return_true")]
+    pub enabled: bool,
     pub group: String,
     pub program: String,
     pub args: Vec<String>,
@@ -30,7 +32,7 @@ pub struct Job {
     #[serde(default)]
     pub restart_strategy: RestartStrategy,
     #[serde(default)]
-    pub event_hooks: HashMap<String, Hook>,
+    pub event_hooks: Vec<Hook>,
     #[serde(default)]
     pub template: Option<template::Template>,
 }
@@ -58,4 +60,8 @@ impl Job {
             RestartBehavior::Never => "never",
         }
     }
+}
+
+const fn return_true() -> bool {
+    true
 }
