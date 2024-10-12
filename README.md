@@ -2,6 +2,7 @@
 
 [![Build status](https://github.com/lubomirkurcak/tend/workflows/release/badge.svg)](https://github.com/lubomirkurcak/tend/actions)
 [![Crates.io](https://img.shields.io/crates/v/tend.svg)](https://crates.io/crates/tend)
+[![Snapcraft](https://snapcraft.io/tend/badge.svg)](https://snapcraft.io/tend)
 
 ### Installation
 
@@ -38,26 +39,15 @@ cargo build --release
 #### Basic
 Create a new job called `hello`:
 ```sh
-tend create hello ping 8.8.8.8
-```
-
-Run `hello`:
-```sh
+tend create "hello" ping 8.8.8.8
 tend run hello
 ```
 
-Press `Ctrl-C` to cancel all jobs and exit the program.
+Press `Ctrl-C` to stop all jobs and exit the program.
 
-#### Management
-
-List jobs:
+To view jobs enter:
 ```sh
 tend list
-```
-
-Reconfigure `hello` to always restart on completion (even successful):
-```sh
-tend create --overwrite hello --restart=always ping 8.8.8.8
 ```
 
 #### Available Programs
@@ -74,7 +64,7 @@ tend create "time" cmd -- /C 'echo Time: %TIME%'
 
 #### Groups
 
-Create a job as a part of a group:
+You can create a job as a part of a group:
 ```sh
 tend create "postgres" --group="dev" kubectl port-forward svc/postgres 5432:5432
 ```
