@@ -1,4 +1,4 @@
-use colored::*;
+use colored::{ColoredString, Colorize};
 
 pub trait Tend {
     fn thick(&self) -> ColoredString;
