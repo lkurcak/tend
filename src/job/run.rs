@@ -6,14 +6,20 @@ use super::{
 use process_wrap::tokio::{TokioChildWrapper, TokioCommandWrap};
 
 impl Job {
-    async fn wait_for_something(
-        &self,
+    fn duration(&self, start_time: std::time::Instant) -> std::time::Duration {
+        let end_time = std::time::Instant::now();
+        end_time.duration_since(start_time)
+    }
+
+    async fn wait_for_something<'a>(
+        &'a self,
         process: &mut Box<dyn TokioChildWrapper>,
         rx: &mut Receiver<()>,
         verbose: bool,
         stdout: &mut Lines<BufReader<ChildStdout>>,
         stderr: &mut Lines<BufReader<ChildStderr>>,
-    ) -> Result<ControlFlow> {
+        start_time: std::time::Instant,
+    ) -> Result<ControlFlow<'a>> {
         let process: &mut tokio::process::Child = process.inner_mut();
 
         tokio::select! {
@@ -39,14 +45,15 @@ impl Job {
                 if let Ok(status) = a {
                     if status.success() {
                         println!(
-                            "{} process finished indicating {}",
+                            "{} process finished indicating {} after running for {}",
                             self.name.job(),
                             "success".success(),
+                    Folktime::duration(self.duration(start_time)).to_string().time_value(),
                         );
                         return if self.restart_on_success() {
-                            Ok(ControlFlow::RestartCommand)
+                            Ok(ControlFlow::RestartCommand(&"success"))
                         } else {
-                            Ok(ControlFlow::StopJob)
+                            Ok(ControlFlow::StopJob(&"success"))
                         };
                     }
                 }
@@ -57,9 +64,9 @@ impl Job {
                     "failure".failure(),
                 );
                 if self.restart_on_failure() {
-                    Ok(ControlFlow::RestartCommand)
+                    Ok(ControlFlow::RestartCommand(&"failure"))
                 } else {
-                    Ok(ControlFlow::StopJob)
+                    Ok(ControlFlow::StopJob(&"failure"))
                 }
             }
             _ = rx.recv() => {
@@ -67,7 +74,7 @@ impl Job {
                     println!("{} received termination signal", self.name.job());
                 }
                 let _ = process.kill().await;
-                Ok(ControlFlow::StopJob)
+                Ok(ControlFlow::StopJob(&"termination signal"))
             }
         }
     }
@@ -116,41 +123,42 @@ impl Job {
 
             loop {
                 let control = self
-                    .wait_for_something(&mut process, &mut rx, verbose, &mut stdout, &mut stderr)
+                    .wait_for_something(
+                        &mut process,
+                        &mut rx,
+                        verbose,
+                        &mut stdout,
+                        &mut stderr,
+                        start_time,
+                    )
                     .await?;
 
                 if control == ControlFlow::Nothing {
                     continue;
                 }
 
-                let end_time = std::time::Instant::now();
-                let job_duration = end_time.duration_since(start_time);
                 let reset_backoff_duration = std::time::Duration::from_secs(60 * 10);
-                if job_duration >= reset_backoff_duration {
+                if self.duration(start_time) >= reset_backoff_duration {
                     backoff_restart_count = 0;
                 }
 
-                print!(
-                    "{} ran for {}",
-                    self.name.job(),
-                    Folktime::duration(job_duration).to_string().time_value(),
-                );
-
                 match control {
                     ControlFlow::Nothing => (),
-                    ControlFlow::RestartCommand => {
+                    ControlFlow::RestartCommand(reason) => {
                         let delay_seconds =
                             self.restart_strategy.delay_seconds(backoff_restart_count);
                         if delay_seconds != 0 {
                             println!(
-                                " (restarting in {} seconds)",
-                                delay_seconds.to_string().time_value()
+                                "{} restarting in {} seconds ({})",
+                                self.name.job(),
+                                delay_seconds.to_string().time_value(),
+                                reason,
                             );
                             tokio::time::sleep(tokio::time::Duration::from_secs(delay_seconds))
                                 .await;
                             self.terminate_process(&mut process, verbose).await?;
                         } else {
-                            println!(" (restarting)");
+                            println!("{} restarting ({})", self.name.job(), reason);
                             self.terminate_process(&mut process, verbose).await?;
                         }
 
@@ -158,9 +166,9 @@ impl Job {
 
                         continue 'job;
                     }
-                    ControlFlow::StopJob => {
+                    ControlFlow::StopJob(reason) => {
                         if verbose {
-                            println!(" (stopping)");
+                            println!("{} stopping ({})", self.name.job(), reason);
                         } else {
                             println!();
                         }

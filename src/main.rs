@@ -83,7 +83,6 @@
     rust_2018_idioms,
     unexpected_cfgs
 )]
-use std::collections::HashMap;
 
 use crate::colors::Tend;
 mod args;
@@ -140,7 +139,7 @@ async fn main() -> Result<()> {
         } => {
             let filter = standard_job_filter(name, all, group, job, exclude);
 
-            match Job::list(&filter) {
+            match Job::list(&filter, args.verbose) {
                 Ok(()) => (),
                 Err(e) => eprintln!("Error: {e}"),
             }
@@ -168,13 +167,14 @@ async fn main() -> Result<()> {
         } => {
             let mut job = Job {
                 name,
+                enabled: true,
                 program,
                 args,
                 restart,
                 group,
                 working_directory: std::env::current_dir()?,
                 restart_strategy,
-                event_hooks: HashMap::new(),
+                event_hooks: vec![],
                 template,
             };
 
@@ -196,9 +196,47 @@ async fn main() -> Result<()> {
             }
             res?;
         }
+        args::Commands::Enable {
+            name,
+            group,
+            job,
+            all,
+            exclude,
+        } => {
+            let filter = standard_job_filter(name, all, group, job, exclude);
+
+            Job::iterate_jobs_filtered(
+                |mut job| {
+                    job.enabled = true;
+                    let _ = job.save(true);
+                },
+                &filter,
+                true,
+                args.verbose,
+            )?;
+        }
+        args::Commands::Disable {
+            name,
+            group,
+            job,
+            all,
+            exclude,
+        } => {
+            let filter = standard_job_filter(name, all, group, job, exclude);
+
+            Job::iterate_jobs_filtered(
+                |mut job| {
+                    job.enabled = false;
+                    let _ = job.save(true);
+                },
+                &filter,
+                true,
+                args.verbose,
+            )?;
+        }
         args::Commands::Edit { name, command } => {
-            let mut job =
-                Job::load(&name).ok_or_else(|| anyhow::anyhow!("Job could not be loaded."))?;
+            let mut job = Job::load(&name, args.verbose)
+                .ok_or_else(|| anyhow::anyhow!("Job could not be loaded."))?;
             match command {
                 args::EditJobCommands::Group { group } => job.group = group,
                 args::EditJobCommands::Hook { command } => match command {
@@ -206,8 +244,8 @@ async fn main() -> Result<()> {
                         if job.event_hooks.is_empty() {
                             println!("No hooks defined for job {}", job.name);
                         } else {
-                            for (name, hook) in &job.event_hooks {
-                                println!("{name}: {hook:?}");
+                            for hook in &job.event_hooks {
+                                println!("{hook:?}");
                             }
                         }
                     }
@@ -217,22 +255,29 @@ async fn main() -> Result<()> {
                             stream,
                             action,
                         } => {
-                            job.event_hooks.insert(
-                                hook,
-                                job::event::Hook {
-                                    event: job::event::Event::DetectSubstring {
-                                        contains: substring,
-                                        stream,
-                                    },
-                                    action,
+                            job.event_hooks.push(job::event::Hook {
+                                name: hook,
+                                event: job::event::Event::DetectSubstring {
+                                    contains: substring,
+                                    stream,
                                 },
-                            );
+                                action,
+                            });
                         }
                     },
-                    args::EditJobHookCommands::Delete { hook } => {
-                        match job.event_hooks.remove(&hook) {
-                            Some(_) => println!("Hook {hook} deleted"),
-                            None => eprintln!("Hook {hook} not found"),
+                    args::EditJobHookCommands::Delete { hook: hook_name } => {
+                        let mut deleted = false;
+                        job.event_hooks.retain(|hook| {
+                            let retain = hook.name != hook_name;
+                            if !retain {
+                                deleted = true;
+                                println!("Hook {hook_name} deleted");
+                            }
+                            retain
+                        });
+
+                        if !deleted {
+                            eprintln!("Hook {hook_name} not found");
                         }
                     }
                 },
@@ -247,6 +292,7 @@ async fn main() -> Result<()> {
             job,
             exclude,
         } => {
+            let unchecked = group.is_empty();
             let filter = standard_job_filter(name, all, group, job, exclude);
 
             if all && !confirm {
@@ -255,12 +301,28 @@ async fn main() -> Result<()> {
                     "Use --confirm to delete all jobs. This cannot be undone.".failure()
                 );
             } else {
-                Job::iterate_jobs_filtered(
-                    |job| {
-                        let _ = job.delete();
-                    },
-                    &filter,
-                )?;
+                if unchecked {
+                    if all {
+                        Job::delete_all_unchecked()?;
+                    } else {
+                        Job::iterate_job_names_filtered(
+                            |job_name| {
+                                let _ = Job::delete_unchecked(job_name);
+                            },
+                            &filter,
+                            args.verbose,
+                        )?;
+                    }
+                } else {
+                    Job::iterate_jobs_filtered(
+                        |job| {
+                            let _ = job.delete();
+                        },
+                        &filter,
+                        true,
+                        args.verbose,
+                    )?;
+                }
             }
         }
     }

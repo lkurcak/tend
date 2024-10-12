@@ -5,10 +5,10 @@ use serde::{Deserialize, Serialize};
 use super::Job;
 
 #[derive(PartialEq, Eq)]
-pub enum ControlFlow {
+pub enum ControlFlow<'a> {
     Nothing,
-    RestartCommand,
-    StopJob,
+    RestartCommand(&'a str),
+    StopJob(&'a str),
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, clap::ValueEnum, Copy, PartialEq, Eq)]
@@ -63,14 +63,16 @@ pub enum Action {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Hook {
+    pub name: String,
     pub event: Event,
     pub action: Action,
 }
 
 impl Job {
-    pub fn stdout_line_callback(&self, line: &str, verbose: bool) -> ControlFlow {
-        for hook in self.event_hooks.values() {
+    pub fn stdout_line_callback<'a>(&'a self, line: &str, verbose: bool) -> ControlFlow<'a> {
+        for hook in &self.event_hooks {
             let Hook {
+                name,
                 event: Event::DetectSubstring { stream, contains },
                 action,
             } = hook;
@@ -86,8 +88,8 @@ impl Job {
                 }
 
                 return match action {
-                    Action::Restart => ControlFlow::RestartCommand,
-                    Action::Stop => ControlFlow::StopJob,
+                    Action::Restart => ControlFlow::RestartCommand(&name),
+                    Action::Stop => ControlFlow::StopJob(&name),
                 };
             }
         }
@@ -95,9 +97,10 @@ impl Job {
         ControlFlow::Nothing
     }
 
-    pub fn stderr_line_callback(&self, line: &str, verbose: bool) -> ControlFlow {
-        for hook in self.event_hooks.values() {
+    pub fn stderr_line_callback<'a>(&'a self, line: &str, verbose: bool) -> ControlFlow<'a> {
+        for hook in &self.event_hooks {
             let Hook {
+                name,
                 event: Event::DetectSubstring { stream, contains },
                 action,
             } = hook;
@@ -113,8 +116,8 @@ impl Job {
                 }
 
                 return match action {
-                    Action::Restart => ControlFlow::RestartCommand,
-                    Action::Stop => ControlFlow::StopJob,
+                    Action::Restart => ControlFlow::RestartCommand(&name),
+                    Action::Stop => ControlFlow::StopJob(&name),
                 };
             }
         }

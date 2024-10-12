@@ -116,6 +116,72 @@ pub enum Commands {
         #[arg(help = "Use -- to separate program arguments from job arguments.")]
         args: Vec<String>,
     },
+    #[command(about = "Enable jobs")]
+    Enable {
+        #[arg(help = "Name of the job to enable", exclusive = true)]
+        name: Option<String>,
+        #[arg(
+            short,
+            long,
+            help = "Enable all jobs",
+            conflicts_with = "group",
+            conflicts_with = "job"
+        )]
+        all: bool,
+        #[arg(
+            short,
+            long,
+            help = "Enable jobs from specific group(s)",
+            num_args = 1..,
+            conflicts_with = "all",
+            use_value_delimiter = true
+        )]
+        group: Vec<String>,
+        #[arg(
+            short,
+            long,
+            help = "Enable specific job(s)",
+            num_args = 1..,
+            conflicts_with = "all",
+            use_value_delimiter = true
+        )]
+        job: Vec<String>,
+        #[arg(alias = "except", short, long, help = "Exclude specific job(s)", num_args = 1.., use_value_delimiter = true)]
+        exclude: Vec<String>,
+    },
+    #[command(about = "Disable jobs")]
+    Disable {
+        #[arg(help = "Name of the job to disable", exclusive = true)]
+        name: Option<String>,
+        #[arg(
+            short,
+            long,
+            help = "Disable all jobs",
+            conflicts_with = "group",
+            conflicts_with = "job"
+        )]
+        all: bool,
+        #[arg(
+            short,
+            long,
+            help = "Disable jobs from specific group(s)",
+            num_args = 1..,
+            conflicts_with = "all",
+            use_value_delimiter = true
+        )]
+        group: Vec<String>,
+        #[arg(
+            short,
+            long,
+            help = "Disable specific job(s)",
+            num_args = 1..,
+            conflicts_with = "all",
+            use_value_delimiter = true
+        )]
+        job: Vec<String>,
+        #[arg(alias = "except", short, long, help = "Exclude specific job(s)", num_args = 1.., use_value_delimiter = true)]
+        exclude: Vec<String>,
+    },
     #[command(alias = "e", alias = "ed", about = "Edit a job")]
     Edit {
         #[arg(help = "Name of the job to edit")]

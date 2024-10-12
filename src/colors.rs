@@ -1,9 +1,9 @@
-use colored::{ColoredString, Colorize};
+use colored::*;
 
 pub trait Tend {
     fn thick(&self) -> ColoredString;
     fn job(&self) -> ColoredString;
-    fn program(&self) -> ColoredString;
+    // fn program(&self) -> ColoredString;
     fn time_value(&self) -> ColoredString;
     fn success(&self) -> ColoredString;
     fn failure(&self) -> ColoredString;
@@ -18,9 +18,7 @@ impl Tend for str {
         self.bold().cyan()
     }
 
-    fn program(&self) -> ColoredString {
-        self.bold().yellow()
-    }
+    // fn program(&self) -> ColoredString { self.bold().yellow() }
 
     fn time_value(&self) -> ColoredString {
         self.bold().yellow()
