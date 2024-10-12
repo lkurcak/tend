@@ -6,7 +6,7 @@ use super::{
 use process_wrap::tokio::{TokioChildWrapper, TokioCommandWrap};
 
 impl Job {
-    fn duration(&self, start_time: std::time::Instant) -> std::time::Duration {
+    fn duration(start_time: std::time::Instant) -> std::time::Duration {
         let end_time = std::time::Instant::now();
         end_time.duration_since(start_time)
     }
@@ -48,12 +48,12 @@ impl Job {
                             "{} process finished indicating {} after running for {}",
                             self.name.job(),
                             "success".success(),
-                    Folktime::duration(self.duration(start_time)).to_string().time_value(),
+                    Folktime::duration(Self::duration(start_time)).to_string().time_value(),
                         );
                         return if self.restart_on_success() {
-                            Ok(ControlFlow::RestartCommand(&"success"))
+                            Ok(ControlFlow::RestartCommand("success"))
                         } else {
-                            Ok(ControlFlow::StopJob(&"success"))
+                            Ok(ControlFlow::StopJob("success"))
                         };
                     }
                 }
@@ -64,9 +64,9 @@ impl Job {
                     "failure".failure(),
                 );
                 if self.restart_on_failure() {
-                    Ok(ControlFlow::RestartCommand(&"failure"))
+                    Ok(ControlFlow::RestartCommand("failure"))
                 } else {
-                    Ok(ControlFlow::StopJob(&"failure"))
+                    Ok(ControlFlow::StopJob("failure"))
                 }
             }
             _ = rx.recv() => {
@@ -74,7 +74,7 @@ impl Job {
                     println!("{} received termination signal", self.name.job());
                 }
                 let _ = process.kill().await;
-                Ok(ControlFlow::StopJob(&"termination signal"))
+                Ok(ControlFlow::StopJob("termination signal"))
             }
         }
     }
@@ -138,7 +138,7 @@ impl Job {
                 }
 
                 let reset_backoff_duration = std::time::Duration::from_secs(60 * 10);
-                if self.duration(start_time) >= reset_backoff_duration {
+                if Self::duration(start_time) >= reset_backoff_duration {
                     backoff_restart_count = 0;
                 }
 

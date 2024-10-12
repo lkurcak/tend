@@ -41,12 +41,7 @@ impl Job {
                 Some(job)
             }
             Err(e) => {
-                eprintln!(
-                    "{} {}: {}",
-                    name.job(),
-                    "could not be loaded".failure(),
-                    e.to_string()
-                );
+                eprintln!("{} {}: {}", name.job(), "could not be loaded".failure(), e);
                 if verbose {
                     eprintln!(
                         "{} is located at: {}",

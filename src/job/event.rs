@@ -88,8 +88,8 @@ impl Job {
                 }
 
                 return match action {
-                    Action::Restart => ControlFlow::RestartCommand(&name),
-                    Action::Stop => ControlFlow::StopJob(&name),
+                    Action::Restart => ControlFlow::RestartCommand(name),
+                    Action::Stop => ControlFlow::StopJob(name),
                 };
             }
         }
@@ -116,8 +116,8 @@ impl Job {
                 }
 
                 return match action {
-                    Action::Restart => ControlFlow::RestartCommand(&name),
-                    Action::Stop => ControlFlow::StopJob(&name),
+                    Action::Restart => ControlFlow::RestartCommand(name),
+                    Action::Stop => ControlFlow::StopJob(name),
                 };
             }
         }

@@ -62,6 +62,6 @@ impl Job {
     }
 }
 
-fn return_true() -> bool {
+const fn return_true() -> bool {
     true
 }

@@ -301,6 +301,7 @@ async fn main() -> Result<()> {
                     "Use --confirm to delete all jobs. This cannot be undone.".failure()
                 );
             } else {
+                #[allow(clippy::collapsible_else_if)]
                 if unchecked {
                     if all {
                         Job::delete_all_unchecked()?;
