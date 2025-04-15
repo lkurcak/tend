@@ -1,7 +1,7 @@
-use super::{filter, Job};
+use super::{Job, filter};
 use crate::colors::Tend;
 use anyhow::Result;
-use prettytable::{format, row, Table};
+use prettytable::{Table, format, row};
 use std::path::PathBuf;
 
 impl Job {

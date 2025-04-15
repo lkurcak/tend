@@ -2,8 +2,8 @@
 authors = ["Ľubomír Kurčák <lubomirkurcak@gmail.com>"]
 name = "tend"
 description = "Quickly spin up/down groups of command-line tasks with automated recovery"
-version = "0.2.13"
-edition = "2021"
+version = "0.2.14"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/lubomirkurcak/tend"
 categories = [
@@ -18,15 +18,15 @@ keywords = ["cli", "task", "automation", "recovery", "tend"]
 
 [dependencies]
 anyhow = "1.0.89"
-clap = { version = "4.5.20", features = ["derive"] }
-colored = "2.1.0"
+clap = { version = "4.5.36", features = ["derive"] }
+colored = "3.0.0"
 dirs-next = "2.0.0"
 folktime = "0.2.1"
 prettytable-rs = "0.10.0"
-process-wrap = { version = "8.0.2", features = ["tokio1"] }
-serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.128"
-tokio = { version = "1.40.0", features = [
+process-wrap = { version = "8.2.0", features = ["tokio1"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+tokio = { version = "1.42.1", features = [
     "rt-multi-thread",
     "macros",
     "time",

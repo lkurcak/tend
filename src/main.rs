@@ -90,7 +90,7 @@ mod colors;
 mod job;
 mod run;
 
-use crate::job::{filter::Filter, Job};
+use crate::job::{Job, filter::Filter};
 use anyhow::Result;
 use clap::Parser;
 

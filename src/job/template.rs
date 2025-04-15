@@ -1,7 +1,7 @@
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
-use super::{event::Action, event::Event, event::Stream, Hook, Job};
+use super::{Hook, Job, event::Action, event::Event, event::Stream};
 
 #[derive(Copy, Clone, Debug, ValueEnum, Serialize, Deserialize)]
 pub enum Template {
