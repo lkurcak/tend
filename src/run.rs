@@ -1,4 +1,4 @@
-use crate::{job::filter::Filter, Job};
+use crate::{Job, job::filter::Filter};
 use tokio::sync::mpsc;
 
 pub async fn run(job_filter: Filter, verbose: bool) -> anyhow::Result<()> {
