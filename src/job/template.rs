@@ -13,14 +13,6 @@ impl Job {
         match template {
             Template::PortForward => {
                 self.event_hooks.push(Hook {
-                    name: "error hook".to_string(),
-                    event: Event::DetectSubstring {
-                        contains: "error".to_string(),
-                        stream: Stream::Any,
-                    },
-                    action: Action::Restart,
-                });
-                self.event_hooks.push(Hook {
                     name: "aborted hook".to_string(),
                     event: Event::DetectSubstring {
                         contains: "aborted".to_string(),
