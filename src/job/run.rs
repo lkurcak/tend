@@ -3,7 +3,7 @@ use super::{
     Receiver, Result, Tend,
 };
 
-use process_wrap::tokio::{TokioChildWrapper, TokioCommandWrap};
+use process_wrap::tokio::{ChildWrapper, CommandWrap};
 
 impl Job {
     fn duration(start_time: std::time::Instant) -> std::time::Duration {
@@ -11,16 +11,17 @@ impl Job {
         end_time.duration_since(start_time)
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn wait_for_something<'a>(
         &'a self,
-        process: &mut Box<dyn TokioChildWrapper>,
+        process: &mut Box<dyn ChildWrapper>,
         rx: &mut Receiver<()>,
         verbose: bool,
         stdout: &mut Lines<BufReader<ChildStdout>>,
         stderr: &mut Lines<BufReader<ChildStderr>>,
         start_time: std::time::Instant,
     ) -> Result<ControlFlow<'a>> {
-        let process: &mut tokio::process::Child = process.inner_mut();
+        // let process = process.inner_child();
 
         tokio::select! {
             stdout_line = stdout.next_line() => {
@@ -72,17 +73,20 @@ impl Job {
                 if verbose {
                     println!("{} received termination signal", self.name.job());
                 }
-                let _ = process.kill().await;
+                let _ = process.start_kill();
+                let _ = process.wait().await;
                 Ok(ControlFlow::StopJob("termination signal"))
             }
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     pub async fn create_repeated_process(self, mut rx: Receiver<()>, verbose: bool) -> Result<()> {
         let mut backoff_restart_count = 0;
+        let mut fast_backoff_restart_count = 0;
 
         'job: loop {
-            let mut command = TokioCommandWrap::with_new(&self.program, |command| {
+            let mut command = CommandWrap::with_new(&self.program, |command| {
                 command
                     .current_dir(&self.working_directory)
                     .args(&self.args)
@@ -136,9 +140,28 @@ impl Job {
                     continue;
                 }
 
-                let reset_backoff_duration = std::time::Duration::from_secs(60 * 10);
-                if Self::duration(start_time) >= reset_backoff_duration {
-                    backoff_restart_count = 0;
+                // Recovery mechanism: reduce backoff count based on how long the job ran successfully
+                let run_duration = Self::duration(start_time);
+                let recovery_threshold = std::time::Duration::from_secs(60); // 1 minute
+
+                if run_duration >= recovery_threshold {
+                    fast_backoff_restart_count = 0;
+                    let old_count = backoff_restart_count;
+
+                    // For every minute of successful runtime, reduce backoff count by 1
+                    // This allows gradual recovery instead of immediate reset
+                    let recovery_amount = (run_duration.as_secs() / 60).min(backoff_restart_count);
+                    backoff_restart_count = backoff_restart_count.saturating_sub(recovery_amount);
+
+                    if verbose && old_count != backoff_restart_count {
+                        println!(
+                            "{} recovered after running for {} (backoff count: {} -> {})",
+                            self.name.job(),
+                            Folktime::duration(run_duration).to_string().time_value(),
+                            old_count,
+                            backoff_restart_count
+                        );
+                    }
                 }
 
                 match control {
@@ -148,19 +171,53 @@ impl Job {
                             self.restart_strategy.delay_seconds(backoff_restart_count);
                         if delay_seconds != 0 {
                             println!(
-                                "{} restarting in {} seconds ({})",
+                                "{} restarting in {} seconds ({}, attempt #{})",
                                 self.name.job(),
                                 delay_seconds.to_string().time_value(),
                                 reason,
+                                backoff_restart_count + 1,
                             );
                             tokio::time::sleep(tokio::time::Duration::from_secs(delay_seconds))
                                 .await;
                         } else {
-                            println!("{} restarting ({})", self.name.job(), reason);
+                            println!(
+                                "{} restarting ({}, attempt #{})",
+                                self.name.job(),
+                                reason,
+                                backoff_restart_count + 1
+                            );
                         }
                         self.terminate_process(&mut process, verbose).await?;
 
                         backoff_restart_count += 1;
+
+                        continue 'job;
+                    }
+                    ControlFlow::FastRestartCommand(reason) => {
+                        let delay_seconds = self
+                            .restart_strategy
+                            .delay_seconds_fast(fast_backoff_restart_count);
+                        if delay_seconds != 0 {
+                            println!(
+                                "{} fast restarting in {} seconds ({}, attempt #{})",
+                                self.name.job(),
+                                delay_seconds.to_string().time_value(),
+                                reason,
+                                fast_backoff_restart_count + 1,
+                            );
+                            tokio::time::sleep(tokio::time::Duration::from_secs(delay_seconds))
+                                .await;
+                        } else {
+                            println!(
+                                "{} fast restarting ({}, attempt #{})",
+                                self.name.job(),
+                                reason,
+                                fast_backoff_restart_count + 1
+                            );
+                        }
+                        self.terminate_process(&mut process, verbose).await?;
+
+                        fast_backoff_restart_count += 1;
 
                         continue 'job;
                     }
@@ -182,7 +239,7 @@ impl Job {
 
     async fn terminate_process(
         &self,
-        process: &mut Box<dyn TokioChildWrapper>,
+        process: &mut Box<dyn ChildWrapper>,
         verbose: bool,
     ) -> Result<()> {
         if verbose {
@@ -197,8 +254,7 @@ impl Job {
             println!("{} waiting for process to terminate", self.name.job());
         }
 
-        let wait_future = Box::into_pin(process.wait());
-        wait_future.await?;
+        process.wait().await?;
 
         Ok(())
     }

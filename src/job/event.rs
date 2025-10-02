@@ -7,6 +7,7 @@ use super::Job;
 #[derive(PartialEq, Eq)]
 pub enum ControlFlow<'a> {
     Nothing,
+    FastRestartCommand(&'a str),
     RestartCommand(&'a str),
     StopJob(&'a str),
 }
@@ -37,6 +38,16 @@ impl RestartStrategy {
                 .unwrap_or(60),
         }
     }
+
+    pub fn delay_seconds_fast(self, restarts: u64) -> u64 {
+        match self {
+            Self::Immediate => 0,
+            Self::ExponentialBackoff => [0, 0, 0, 1, 2, 3, 5]
+                .get(usize::try_from(restarts).unwrap_or(0))
+                .copied()
+                .unwrap_or(8),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ValueEnum, Default)]
@@ -58,6 +69,7 @@ pub enum Event {
 #[derive(Debug, Clone, Serialize, Deserialize, ValueEnum)]
 pub enum Action {
     Restart,
+    FastRestart,
     Stop,
 }
 
@@ -89,6 +101,7 @@ impl Job {
 
                 return match action {
                     Action::Restart => ControlFlow::RestartCommand(name),
+                    Action::FastRestart => ControlFlow::FastRestartCommand(name),
                     Action::Stop => ControlFlow::StopJob(name),
                 };
             }
@@ -117,6 +130,7 @@ impl Job {
 
                 return match action {
                     Action::Restart => ControlFlow::RestartCommand(name),
+                    Action::FastRestart => ControlFlow::FastRestartCommand(name),
                     Action::Stop => ControlFlow::StopJob(name),
                 };
             }
