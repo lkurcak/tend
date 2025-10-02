@@ -47,7 +47,7 @@ jobs:
         run: cargo test --release --verbose
 
       - name: Check formatting
-        if: matrix.toolchain == 'stable'
+        if: matrix.toolchain == 'stable' && matrix.os != 'macos-latest'
         run: cargo fmt --check
 
       - name: Clippy
