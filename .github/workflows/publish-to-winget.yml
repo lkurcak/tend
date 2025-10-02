@@ -18,7 +18,7 @@ jobs:
       - name: Submit package to Windows Package Manager Community Repository
         uses: vedantmgoyal2009/winget-releaser@v2
         with:
-          identifier: lubomirkurcak.tend
+          identifier: lkurcak.tend
           version: ${{ inputs.tag_name || github.event.release.tag_name }}
           installers-regex: .*windows.*\.zip$
           release-tag: ${{ inputs.tag_name || github.event.release.tag_name }}
