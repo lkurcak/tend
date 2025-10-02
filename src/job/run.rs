@@ -42,8 +42,8 @@ impl Job {
                 Ok(ControlFlow::Nothing)
             }
             a = process.wait() => {
-                if let Ok(status) = a {
-                    if status.success() {
+                if let Ok(status) = a
+                    && status.success() {
                         println!(
                             "{} process finished indicating {} after running for {}",
                             self.name.job(),
@@ -56,7 +56,6 @@ impl Job {
                             Ok(ControlFlow::StopJob("success"))
                         };
                     }
-                }
 
                 println!(
                     "{} process finished indicating {}",
@@ -156,11 +155,10 @@ impl Job {
                             );
                             tokio::time::sleep(tokio::time::Duration::from_secs(delay_seconds))
                                 .await;
-                            self.terminate_process(&mut process, verbose).await?;
                         } else {
                             println!("{} restarting ({})", self.name.job(), reason);
-                            self.terminate_process(&mut process, verbose).await?;
                         }
+                        self.terminate_process(&mut process, verbose).await?;
 
                         backoff_restart_count += 1;
 
