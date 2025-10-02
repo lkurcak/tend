@@ -34,6 +34,7 @@
     clippy::if_let_mutex,
     clippy::implicit_clone,
     clippy::imprecise_flops,
+    clippy::indexing_slicing,
     clippy::inefficient_to_string,
     clippy::invalid_upcast_comparisons,
     clippy::large_digit_groups,
@@ -47,7 +48,6 @@
     clippy::map_err_ignore,
     clippy::map_flatten,
     clippy::map_unwrap_or,
-    clippy::match_on_vec_items,
     clippy::match_same_arms,
     clippy::match_wild_err_arm,
     clippy::match_wildcard_for_single_variants,
@@ -70,7 +70,6 @@
     clippy::string_add_assign,
     clippy::string_add,
     clippy::string_lit_as_bytes,
-    clippy::string_to_string,
     clippy::todo,
     clippy::trait_duplication_in_bounds,
     clippy::unimplemented,
@@ -183,16 +182,15 @@ async fn main() -> Result<()> {
             }
 
             let res = job.save(overwrite);
-            if let Err(ref error) = res {
-                if let Some(error) = error.downcast_ref::<std::io::Error>() {
-                    if error.kind() == std::io::ErrorKind::AlreadyExists {
-                        eprintln!(
-                            "{}",
-                            "Job already exists. Use --overwrite to replace it.".failure()
-                        );
-                        return Ok(());
-                    }
-                }
+            if let Err(ref error) = res
+                && let Some(error) = error.downcast_ref::<std::io::Error>()
+                && error.kind() == std::io::ErrorKind::AlreadyExists
+            {
+                eprintln!(
+                    "{}",
+                    "Job already exists. Use --overwrite to replace it.".failure()
+                );
+                return Ok(());
             }
             res?;
         }

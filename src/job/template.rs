@@ -1,7 +1,10 @@
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
-use super::{Hook, Job, event::Action, event::Event, event::Stream};
+use super::{
+    Hook, Job,
+    event::{Action, Event, RestartStrategy, Stream},
+};
 
 #[derive(Copy, Clone, Debug, ValueEnum, Serialize, Deserialize)]
 pub enum Template {
@@ -12,21 +15,24 @@ impl Job {
     pub fn apply_template(&mut self, template: Template) {
         match template {
             Template::PortForward => {
+                self.restart_strategy = RestartStrategy::ExponentialBackoff;
+
                 self.event_hooks.push(Hook {
-                    name: "aborted hook".to_string(),
+                    name: "lost connection hook".to_string(),
                     event: Event::DetectSubstring {
-                        contains: "aborted".to_string(),
+                        contains: "lost connection to pod".to_string(),
                         stream: Stream::Any,
                     },
-                    action: Action::Restart,
+                    action: Action::FastRestart,
                 });
+
                 self.event_hooks.push(Hook {
-                    name: "connection lost hook".to_string(),
+                    name: "pending hook".to_string(),
                     event: Event::DetectSubstring {
-                        contains: "connection lost".to_string(),
+                        contains: "Current status=Pending".to_string(),
                         stream: Stream::Any,
                     },
-                    action: Action::Restart,
+                    action: Action::FastRestart,
                 });
             }
         }
