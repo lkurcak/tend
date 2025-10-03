@@ -128,7 +128,12 @@ async fn main() -> Result<()> {
         colored::control::set_override(false);
     }
 
-    match args.command {
+    let Some(command) = args.command else {
+        let _ = <args::Cli as clap::CommandFactory>::command().print_help();
+        std::process::exit(0);
+    };
+
+    match command {
         args::Commands::List {
             all,
             group,
