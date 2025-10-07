@@ -10,7 +10,7 @@ use crate::job::event::{RestartBehavior, RestartStrategy};
 )]
 pub struct Cli {
     #[command(subcommand)]
-    pub command: Commands,
+    pub command: Option<Commands>,
 
     #[arg(long, short, help = "Print extra information")]
     pub verbose: bool,
