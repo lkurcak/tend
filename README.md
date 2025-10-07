@@ -1,9 +1,9 @@
 # tend
 
 [![Build status](https://github.com/lkurcak/tend/workflows/release/badge.svg)](https://github.com/lkurcak/tend/actions)
-[![Crates.io](https://img.shields.io/crates/v/tend.svg)](https://crates.io/crates/tend)
+[![Crates.io](https://img.shields.io/crates/v/tend.svg?color=blue)](https://crates.io/crates/tend)
+[![WinGet Package Version](https://img.shields.io/winget/v/lkurcak.tend?color=blue)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/l/lkurcak/tend)
 [![Snapcraft](https://snapcraft.io/tend/badge.svg)](https://snapcraft.io/tend)
-[![WinGet Package Version](https://img.shields.io/winget/v/lkurcak.tend)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/l/lkurcak/tend)
 
 A command-line tool for managing and running multiple processes.
 
