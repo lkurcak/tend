@@ -1,12 +1,14 @@
 # tend
 
-[![Build status](https://github.com/lubomirkurcak/tend/workflows/release/badge.svg)](https://github.com/lubomirkurcak/tend/actions)
+[![Build status](https://github.com/lkurcak/tend/workflows/release/badge.svg)](https://github.com/lkurcak/tend/actions)
 [![Crates.io](https://img.shields.io/crates/v/tend.svg)](https://crates.io/crates/tend)
 [![Snapcraft](https://snapcraft.io/tend/badge.svg)](https://snapcraft.io/tend)
+[![WinGet Package Version](https://img.shields.io/winget/v/lkurcak.tend)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/l/lkurcak/tend)
+
 
 ### Installation
 
-**[Download binaries](https://github.com/lubomirkurcak/tend/releases)** if you are using **Windows**, **macOS** or **Linux**.
+**[Download binaries](https://github.com/lkurcak/tend/releases)** if you are using **Windows**, **macOS** or **Linux**.
 
 You can install `tend` using `snap`:
 
@@ -17,7 +19,7 @@ sudo snap install tend
 Or with `winget`:
 
 ```sh
-winget install lubomirkurcak.tend
+winget install lkurcak.tend
 ```
 
 Or using `cargo`:
@@ -29,7 +31,7 @@ cargo install tend
 Or build from source:
 
 ```sh
-git clone https://github.com/lubomirkurcak/tend
+git clone https://github.com/lkurcak/tend
 cd tend
 cargo build --release
 ```
