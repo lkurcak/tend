@@ -5,74 +5,56 @@
 [![Snapcraft](https://snapcraft.io/tend/badge.svg)](https://snapcraft.io/tend)
 [![WinGet Package Version](https://img.shields.io/winget/v/lkurcak.tend)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/l/lkurcak/tend)
 
+A command-line tool for managing and running multiple processes.
 
-### Installation
+## Installation
 
-**[Download binaries](https://github.com/lkurcak/tend/releases)** if you are using **Windows**, **macOS** or **Linux**.
-
-You can install `tend` using `snap`:
-
-```sh
-sudo snap install tend
-```
-
-Or with `winget`:
-
+**Windows:**
 ```sh
 winget install lkurcak.tend
 ```
 
-Or using `cargo`:
+**Linux (Snap):**
+```sh
+sudo snap install tend
+```
 
+**macOS / Other:**
+[Download binary](https://github.com/lkurcak/tend/releases)
+
+**Cargo:**
 ```sh
 cargo install tend
 ```
 
-Or build from source:
+## Quick Start
 
 ```sh
-git clone https://github.com/lkurcak/tend
-cd tend
-cargo build --release
-```
-
-### Usage
-
-#### Basic
-Create a new job called `hello`:
-```sh
+# Create a job
 tend create "hello" ping 8.8.8.8
+
+# Run it
 tend run hello
-```
 
-Press `Ctrl-C` to stop all jobs and exit the program.
-
-To view jobs enter:
-```sh
+# View all jobs
 tend list
 ```
 
-#### Available Programs
-Based on your platform and configuration you will have access to different programs and shells. Make sure the programs are accessible from your current working directory.
+Press `Ctrl-C` to stop all jobs.
 
-For example, you could write this on Linux:
-```sh
-tend create "time" sh -- -c 'echo Time: $(date)'
-```
-to achieve something similar as this on Windows:
-```sh
-tend create "time" cmd -- /C 'echo Time: %TIME%'
-```
+## Examples
 
-#### Groups
-
-You can create a job as a part of a group:
+**Run jobs by group:**
 ```sh
 tend create "postgres" --group="dev" kubectl port-forward svc/postgres 5432:5432
-```
-
-Start all jobs from a specific group:
-```sh
 tend run --group "dev"
 ```
 
+**Run any command available in your shell:**
+```sh
+# Linux
+tend create "time" sh -- -c 'echo Time: $(date)'
+
+# Windows
+tend create "time" cmd -- /C "echo Time: %TIME%"
+```
