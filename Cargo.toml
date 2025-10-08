@@ -2,7 +2,7 @@
 authors = ["Ľubomír Kurčák <lubomirkurcak@gmail.com>"]
 name = "tend"
 description = "Quickly spin up/down groups of command-line tasks with automated recovery"
-version = "0.2.16"
+version = "0.2.17"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/lubomirkurcak/tend"
