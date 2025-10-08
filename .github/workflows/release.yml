@@ -118,7 +118,9 @@ jobs:
         shell: bash
         if: matrix.os == 'windows-latest'
         run: |
-          7z a "$ARCHIVE.zip" "$ARCHIVE"
+          cd "$ARCHIVE"
+          7z a "../$ARCHIVE.zip" *
+          cd ..
           certutil -hashfile "$ARCHIVE.zip" SHA256 > "$ARCHIVE.zip.sha256"
           echo "ASSET=$ARCHIVE.zip" >> $GITHUB_ENV
           echo "ASSET_SUM=$ARCHIVE.zip.sha256" >> $GITHUB_ENV
