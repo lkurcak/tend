@@ -11,7 +11,12 @@ Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org).
 
 ## Installation
 
-**Windows:**
+**Homebrew (macOS / Linux)**:
+```sh
+brew install lkurcak/tap/tend
+```
+
+**Winget (Windows):**
 ```sh
 winget install lkurcak.tend
 ```
