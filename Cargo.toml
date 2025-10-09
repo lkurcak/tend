@@ -6,7 +6,7 @@ description = "Command-line tool for managing and running multiple processes"
 edition = "2024"
 rust-version = "1.90"
 license = "Unlicense OR MIT"
-repository = "https://github.com/lubomirkurcak/tend"
+repository = "https://github.com/lkurcak/tend"
 categories = [
     "command-line-interface",
     "command-line-utilities",
