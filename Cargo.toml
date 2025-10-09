@@ -1,6 +1,6 @@
 [package]
 name = "tend"
-version = "0.2.17"
+version = "0.2.18"
 authors = ["Ľubomír Kurčák <lubomirkurcak@gmail.com>"]
 description = "Command-line tool for managing and running multiple processes"
 edition = "2024"
