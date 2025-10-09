@@ -7,6 +7,8 @@
 
 A command-line tool for managing and running multiple processes.
 
+Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org).
+
 ## Installation
 
 **Windows:**
@@ -14,17 +16,17 @@ A command-line tool for managing and running multiple processes.
 winget install lkurcak.tend
 ```
 
-**Linux (Snap):**
+**Snapcraft:**
 ```sh
 sudo snap install tend
 ```
 
-**macOS / Other:**
-[Download binary](https://github.com/lkurcak/tend/releases)
+**Binary:**
+[Download](https://github.com/lkurcak/tend/releases)
 
 **Cargo:**
 ```sh
-cargo install tend
+cargo install tend --locked
 ```
 
 ## Quick Start
