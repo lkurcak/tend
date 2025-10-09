@@ -5,7 +5,7 @@
 [![WinGet Package Version](https://img.shields.io/winget/v/lkurcak.tend?color=blue)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/l/lkurcak/tend)
 [![Snapcraft](https://snapcraft.io/tend/badge.svg)](https://snapcraft.io/tend)
 
-A command-line tool for managing and running multiple processes.
+Command-line tool for managing and running multiple processes.
 
 Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org).
 

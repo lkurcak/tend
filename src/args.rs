@@ -6,7 +6,7 @@ use crate::job::event::{RestartBehavior, RestartStrategy};
 #[command(
     author,
     version,
-    about = "Quickly spin up/down groups of command-line tasks with automated recovery"
+    about = "Command-line tool for managing and running multiple processes"
 )]
 pub struct Cli {
     #[command(subcommand)]
