@@ -5,26 +5,33 @@
 [![WinGet Package Version](https://img.shields.io/winget/v/lkurcak.tend?color=blue)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/l/lkurcak/tend)
 [![Snapcraft](https://snapcraft.io/tend/badge.svg)](https://snapcraft.io/tend)
 
-A command-line tool for managing and running multiple processes.
+Command-line tool for managing and running multiple processes.
+
+Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org).
 
 ## Installation
 
-**Windows:**
+**Homebrew (macOS / Linux)**:
+```sh
+brew install lkurcak/tap/tend
+```
+
+**Winget (Windows):**
 ```sh
 winget install lkurcak.tend
 ```
 
-**Linux (Snap):**
+**Snapcraft:**
 ```sh
 sudo snap install tend
 ```
 
-**macOS / Other:**
-[Download binary](https://github.com/lkurcak/tend/releases)
+**Binary:**
+[Download](https://github.com/lkurcak/tend/releases)
 
 **Cargo:**
 ```sh
-cargo install tend
+cargo install tend --locked
 ```
 
 ## Quick Start

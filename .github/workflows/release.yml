@@ -112,7 +112,7 @@ jobs:
         run: |
           mkdir -p "$ARCHIVE"/
           cp "$BIN" "$ARCHIVE"/
-          cp {README.md,LICENSE-MIT,LICENSE-APACHE} "$ARCHIVE"/
+          cp {README.md,UNLICENSE,LICENSE-MIT} "$ARCHIVE"/
 
       - name: Build archive (Windows)
         shell: bash

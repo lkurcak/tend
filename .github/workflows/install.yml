@@ -59,7 +59,7 @@ jobs:
 
     - name: Install
       run: |
-        winget install lubomirkurcak.tend --disable-interactivity --accept-source-agreements
+        winget install lkurcak.tend --disable-interactivity --accept-source-agreements
 
     - name: List installed packages
       run: |
