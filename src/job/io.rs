@@ -137,20 +137,32 @@ impl Job {
         Ok(())
     }
 
-    pub fn list(job_filter: &filter::Filter, verbose: bool) -> Result<()> {
+    pub fn list(job_filter: &filter::Filter, verbose: bool, no_color: bool) -> Result<()> {
         let jobs = Self::jobs_dir()?;
         let mut table = Table::new();
         table.set_format(*format::consts::FORMAT_CLEAN);
 
-        table.set_titles(row![FB =>
-            "ENABLED",
-            "JOB",
-            "PROGRAM",
-            "ARGS",
-            "WORKING DIRECTORY",
-            "RESTART",
-            "GROUP",
-        ]);
+        if no_color {
+            table.set_titles(row![
+                "ENABLED",
+                "JOB",
+                "PROGRAM",
+                "ARGS",
+                "WORKING DIRECTORY",
+                "RESTART",
+                "GROUP",
+            ]);
+        } else {
+            table.set_titles(row![FB =>
+                "ENABLED",
+                "JOB",
+                "PROGRAM",
+                "ARGS",
+                "WORKING DIRECTORY",
+                "RESTART",
+                "GROUP",
+            ]);
+        }
 
         for entry in std::fs::read_dir(jobs)? {
             let entry = entry?;
@@ -165,15 +177,27 @@ impl Job {
                     continue;
                 }
 
-                table.add_row(row![
-                    r->if job.enabled { "*" } else { " " },
-                    bFC->&job.name,
-                    bFY->&job.program,
-                    job.args.join(" "),
-                    job.working_directory.display(),
-                    job.restart_behaviour(),
-                    job.group,
-                ]);
+                if no_color {
+                    table.add_row(row![
+                        r->if job.enabled { "*" } else { " " },
+                        &job.name,
+                        &job.program,
+                        job.args.join(" "),
+                        job.working_directory.display(),
+                        job.restart_behaviour(),
+                        job.group,
+                    ]);
+                } else {
+                    table.add_row(row![
+                        r->if job.enabled { "*" } else { " " },
+                        bFC->&job.name,
+                        bFY->&job.program,
+                        job.args.join(" "),
+                        job.working_directory.display(),
+                        job.restart_behaviour(),
+                        job.group,
+                    ]);
+                }
             }
         }
 

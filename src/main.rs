@@ -143,7 +143,7 @@ async fn main() -> Result<()> {
         } => {
             let filter = standard_job_filter(name, all, group, job, exclude);
 
-            match Job::list(&filter, args.verbose) {
+            match Job::list(&filter, args.verbose, args.no_color) {
                 Ok(()) => (),
                 Err(e) => eprintln!("Error: {e}"),
             }
