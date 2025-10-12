@@ -49,14 +49,44 @@ jobs:
       run: |
         tend --version
 
+  homebrew-macos:
+    runs-on: macos-latest
+    steps:
+    - name: Install
+      run: |
+        brew install lkurcak/tap/tend
+
+    - name: List installed packages
+      run: |
+        brew list
+
+    - name: Run
+      run: |
+        tend --version
+
+  homebrew-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Homebrew
+      run: |
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
+
+    - name: Install
+      run: |
+        brew install lkurcak/tap/tend
+
+    - name: List installed packages
+      run: |
+        brew list
+
+    - name: Run
+      run: |
+        tend --version
+
   winget:
     runs-on: windows-latest
     steps:
-    - name: Install winget
-      uses: Cyberboss/install-winget@v1
-      with:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Install
       run: |
         winget install lkurcak.tend --disable-interactivity --accept-source-agreements
