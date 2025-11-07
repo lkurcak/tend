@@ -34,6 +34,15 @@ impl Job {
                     },
                     action: Action::FastRestart,
                 });
+
+                self.event_hooks.push(Hook {
+                    name: "timeout hook".to_string(),
+                    event: Event::DetectSubstring {
+                        contains: "Timeout occurred".to_string(),
+                        stream: Stream::Any,
+                    },
+                    action: Action::FastRestart,
+                });
             }
         }
     }
