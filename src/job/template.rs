@@ -43,6 +43,24 @@ impl Job {
                     },
                     action: Action::FastRestart,
                 });
+
+                self.event_hooks.push(Hook {
+                    name: "container not running hook".to_string(),
+                    event: Event::DetectSubstring {
+                        contains: "container not running".to_string(),
+                        stream: Stream::Any,
+                    },
+                    action: Action::Restart,
+                });
+
+                self.event_hooks.push(Hook {
+                    name: "connection forcibly closed hook".to_string(),
+                    event: Event::DetectSubstring {
+                        contains: "An existing connection was forcibly closed".to_string(),
+                        stream: Stream::Any,
+                    },
+                    action: Action::FastRestart,
+                });
             }
         }
     }
