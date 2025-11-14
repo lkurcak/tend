@@ -52,6 +52,15 @@ impl Job {
                     },
                     action: Action::Restart,
                 });
+
+                self.event_hooks.push(Hook {
+                    name: "connection forcibly closed hook".to_string(),
+                    event: Event::DetectSubstring {
+                        contains: "An existing connection was forcibly closed".to_string(),
+                        stream: Stream::Any,
+                    },
+                    action: Action::FastRestart,
+                });
             }
         }
     }
