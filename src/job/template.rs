@@ -61,6 +61,15 @@ impl Job {
                     },
                     action: Action::FastRestart,
                 });
+
+                self.event_hooks.push(Hook {
+                    name: "no such container hook".to_string(),
+                    event: Event::DetectSubstring {
+                        contains: "No such container:".to_string(),
+                        stream: Stream::Any,
+                    },
+                    action: Action::Restart,
+                });
             }
         }
     }
