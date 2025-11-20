@@ -1,6 +1,6 @@
 [package]
 name = "tend"
-version = "0.2.20"
+version = "0.2.21"
 authors = ["Ľubomír Kurčák <lubomirkurcak@gmail.com>"]
 description = "Command-line tool for managing and running multiple processes"
 edition = "2024"
@@ -21,7 +21,7 @@ exclude = [
 
 [dependencies]
 anyhow = "1.0.100"
-clap = { version = "4.5.51", features = ["derive"] }
+clap = { version = "4.5.53", features = ["derive"] }
 colored = "3.0.0"
 dirs-next = "2.0.0"
 folktime = "0.2.1"
