@@ -1,4 +1,3 @@
-use crate::colors::Tend;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
@@ -81,7 +80,7 @@ pub struct Hook {
 }
 
 impl Job {
-    pub fn stdout_line_callback<'a>(&'a self, line: &str, verbose: bool) -> ControlFlow<'a> {
+    pub fn stdout_line_callback<'a>(&'a self, line: &str) -> ControlFlow<'a> {
         for hook in &self.event_hooks {
             let Hook {
                 name,
@@ -95,10 +94,6 @@ impl Job {
             };
 
             if detection {
-                if verbose {
-                    println!("{} triggered hook {:?}", self.name.job(), hook);
-                }
-
                 return match action {
                     Action::Restart => ControlFlow::RestartCommand(name),
                     Action::FastRestart => ControlFlow::FastRestartCommand(name),
@@ -110,7 +105,7 @@ impl Job {
         ControlFlow::Nothing
     }
 
-    pub fn stderr_line_callback<'a>(&'a self, line: &str, verbose: bool) -> ControlFlow<'a> {
+    pub fn stderr_line_callback<'a>(&'a self, line: &str) -> ControlFlow<'a> {
         for hook in &self.event_hooks {
             let Hook {
                 name,
@@ -124,10 +119,6 @@ impl Job {
             };
 
             if detection {
-                if verbose {
-                    println!("{} triggered hook {:?}", self.name.job(), hook);
-                }
-
                 return match action {
                     Action::Restart => ControlFlow::RestartCommand(name),
                     Action::FastRestart => ControlFlow::FastRestartCommand(name),

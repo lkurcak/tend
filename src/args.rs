@@ -17,6 +17,13 @@ pub struct Cli {
 
     #[arg(long, help = "Disable color output")]
     pub no_color: bool,
+
+    #[arg(
+        long,
+        help = "Log retention period in days (default: 7)",
+        value_name = "DAYS"
+    )]
+    pub log_retention: Option<u64>,
 }
 
 #[derive(Debug, Subcommand)]

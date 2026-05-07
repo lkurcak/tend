@@ -19,7 +19,7 @@
     clippy::dbg_macro,
     clippy::debug_assert_with_mut_call,
     clippy::doc_markdown,
-    clippy::empty_enum,
+    clippy::empty_enums,
     clippy::enum_glob_use,
     clippy::exit,
     clippy::expl_impl_clone_on_copy,
@@ -88,6 +88,7 @@ mod args;
 mod colors;
 mod job;
 mod run;
+mod tui;
 
 use crate::job::{Job, filter::Filter};
 use anyhow::Result;
@@ -129,8 +130,9 @@ async fn main() -> Result<()> {
     }
 
     let Some(command) = args.command else {
-        let _ = <args::Cli as clap::CommandFactory>::command().print_help();
-        std::process::exit(0);
+        let filter = Filter::All { exclude: vec![] };
+        run::run(filter, args.verbose, false, args.log_retention).await?;
+        return Ok(());
     };
 
     match command {
@@ -157,7 +159,7 @@ async fn main() -> Result<()> {
         } => {
             let filter = standard_job_filter(name, all, group, job, exclude);
 
-            run::run(filter, args.verbose).await?;
+            run::run(filter, args.verbose, true, args.log_retention).await?;
         }
         args::Commands::Create {
             name,

@@ -7,7 +7,6 @@
 
 Command-line tool for managing and running multiple processes.
 
-Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org).
 
 ## Installation
 
@@ -65,3 +64,6 @@ tend create "time" sh -- -c 'echo Time: $(date)'
 # Windows
 tend create "time" cmd -- /C "echo Time: %TIME%"
 ```
+
+## License
+Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org).
