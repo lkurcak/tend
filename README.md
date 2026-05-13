@@ -5,9 +5,9 @@
 [![WinGet Package Version](https://img.shields.io/winget/v/lkurcak.tend?color=blue)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/l/lkurcak/tend)
 [![Snapcraft](https://snapcraft.io/tend/badge.svg)](https://snapcraft.io/tend)
 
-Command-line tool for managing and running multiple processes.
+`tend` is a command-line process manager for commands you run often. Save a command as a job, run one job or a group of jobs, and let `tend` restart them when they exit or when output hooks match.
 
-Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org).
+It is useful for local development services, port forwards, and other long-running commands you want to start and supervise together.
 
 ## Installation
 
@@ -37,31 +37,49 @@ cargo install tend --locked
 ## Quick Start
 
 ```sh
-# Create a job
-tend create "hello" ping 8.8.8.8
+# Create a job named "hello"
+tend create hello ping 8.8.8.8
 
-# Run it
+# Run the job
 tend run hello
 
-# View all jobs
+# List saved jobs
 tend list
 ```
 
-Press `Ctrl-C` to stop all jobs.
+Press `Ctrl+C` to stop running jobs.
+
+Jobs are stored in `~/.tend/jobs` as JSON files.
 
 ## Examples
 
 **Run jobs by group:**
 ```sh
-tend create "postgres" --group="dev" kubectl port-forward svc/postgres 5432:5432
-tend run --group "dev"
+tend create --group dev postgres kubectl port-forward svc/postgres 5432:5432
+tend run --group dev
 ```
 
-**Run any command available in your shell:**
+**Run a shell command:**
 ```sh
 # Linux
-tend create "time" sh -- -c 'echo Time: $(date)'
+tend create time sh -- -c 'echo "Time: $(date)"'
 
 # Windows
-tend create "time" cmd -- /C "echo Time: %TIME%"
+tend create time cmd -- /C "echo Time: %TIME%"
 ```
+
+**Restart only after failures:**
+```sh
+tend create --restart on-failure api cargo run
+```
+
+**Use the port-forward template:**
+```sh
+tend create --template port-forward postgres kubectl port-forward svc/postgres 5432:5432
+```
+
+See [EXAMPLES.md](EXAMPLES.md) for hooks that restart or stop jobs based on command output.
+
+## License
+
+Dual-licensed under MIT or the [UNLICENSE](https://unlicense.org).
