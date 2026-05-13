@@ -43,11 +43,7 @@ impl Job {
             Err(e) => {
                 eprintln!("{} {}: {}", name.job(), "could not be loaded".failure(), e);
                 if verbose {
-                    eprintln!(
-                        "{} is located at: {}",
-                        name.job(),
-                        jobs.join(name).display()
-                    );
+                    eprintln!("Job file for {}: {}", name.job(), jobs.join(name).display());
                 }
                 None
             }
@@ -202,7 +198,7 @@ impl Job {
         }
 
         if table.is_empty() {
-            println!("No jobs found");
+            println!("No matching jobs found");
         } else {
             table.printstd();
         }

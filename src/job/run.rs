@@ -43,13 +43,14 @@ impl Job {
                 Ok(ControlFlow::Nothing)
             }
             a = process.wait() => {
-                if let Ok(status) = a
-                    && status.success() {
+                let runtime = Folktime::duration(Self::duration(start_time)).to_string();
+                match a {
+                    Ok(status) if status.success() => {
                         println!(
-                            "{} process finished indicating {} after running for {}",
+                            "{} process exited {} after {}",
                             self.name.job(),
-                            "success".success(),
-                    Folktime::duration(Self::duration(start_time)).to_string().time_value(),
+                            "successfully".success(),
+                            runtime.time_value(),
                         );
                         return if self.restart_on_success() {
                             Ok(ControlFlow::RestartCommand("success"))
@@ -57,12 +58,23 @@ impl Job {
                             Ok(ControlFlow::StopJob("success"))
                         };
                     }
+                    Ok(status) => {
+                        println!(
+                            "{} process exited with {} ({status}) after {}",
+                            self.name.job(),
+                            "failure".failure(),
+                            runtime.time_value(),
+                        );
+                    }
+                    Err(error) => {
+                        println!(
+                            "{} could not read process exit status after {}: {error}",
+                            self.name.job(),
+                            runtime.time_value(),
+                        );
+                    }
+                }
 
-                println!(
-                    "{} process finished indicating {}",
-                    self.name.job(),
-                    "failure".failure(),
-                );
                 if self.restart_on_failure() {
                     Ok(ControlFlow::RestartCommand("failure"))
                 } else {
@@ -104,7 +116,7 @@ impl Job {
             let mut process = command.spawn()?;
 
             if verbose {
-                println!("{} starting", self.name.job(),);
+                println!("{} starting", self.name.job());
             }
             let start_time = std::time::Instant::now();
 
@@ -199,7 +211,7 @@ impl Job {
                             .delay_seconds_fast(fast_backoff_restart_count);
                         if delay_seconds != 0 {
                             println!(
-                                "{} fast restarting in {} seconds ({}, attempt #{})",
+                                "{} restarting quickly in {} seconds ({}, attempt #{})",
                                 self.name.job(),
                                 delay_seconds.to_string().time_value(),
                                 reason,
@@ -209,7 +221,7 @@ impl Job {
                                 .await;
                         } else {
                             println!(
-                                "{} fast restarting ({}, attempt #{})",
+                                "{} restarting quickly ({}, attempt #{})",
                                 self.name.job(),
                                 reason,
                                 fast_backoff_restart_count + 1
@@ -247,7 +259,7 @@ impl Job {
         }
 
         if let Err(e) = process.start_kill() {
-            eprintln!("{} failed to send SIGTERM: {}", self.name.job(), e);
+            eprintln!("{} failed to stop process: {}", self.name.job(), e);
         }
 
         if verbose {

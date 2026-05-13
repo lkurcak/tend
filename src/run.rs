@@ -21,7 +21,7 @@ pub async fn run(job_filter: Filter, verbose: bool) -> anyhow::Result<()> {
     )?;
 
     if count == 0 {
-        anyhow::bail!("No jobs matched.");
+        anyhow::bail!("No enabled jobs matched.");
     }
 
     loop {
