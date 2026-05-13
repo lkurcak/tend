@@ -18,7 +18,7 @@ pub async fn run(
     )?;
 
     if jobs.is_empty() {
-        anyhow::bail!("No jobs matched.");
+        anyhow::bail!("No enabled jobs matched.");
     }
 
     tui::run_tui(jobs, auto_start, log_retention_days).await
