@@ -240,8 +240,9 @@ async fn main() -> Result<()> {
             )?;
         }
         args::Commands::Edit { name, command } => {
-            let mut job = Job::load(&name, args.verbose)
-                .ok_or_else(|| anyhow::anyhow!("Job could not be loaded."))?;
+            let mut job = Job::load(&name, args.verbose).ok_or_else(|| {
+                anyhow::anyhow!("Job '{name}' was not found or could not be loaded.")
+            })?;
             match command {
                 args::EditJobCommands::Group { group } => job.group = group,
                 args::EditJobCommands::Hook { command } => match command {
@@ -250,7 +251,24 @@ async fn main() -> Result<()> {
                             println!("No hooks defined for job {}", job.name);
                         } else {
                             for hook in &job.event_hooks {
-                                println!("{hook:?}");
+                                let job::event::Event::DetectSubstring { stream, contains } =
+                                    &hook.event;
+                                let stream = match stream {
+                                    job::event::Stream::Stdout => "stdout",
+                                    job::event::Stream::Stderr => "stderr",
+                                    job::event::Stream::Any => "stdout or stderr",
+                                };
+                                let action = match &hook.action {
+                                    job::event::Action::Restart => "restart the job",
+                                    job::event::Action::FastRestart => {
+                                        "restart the job with the short backoff"
+                                    }
+                                    job::event::Action::Stop => "stop the job",
+                                };
+                                println!(
+                                    "{}: when {} contains {:?}, {}",
+                                    hook.name, stream, contains, action
+                                );
                             }
                         }
                     }
@@ -276,7 +294,7 @@ async fn main() -> Result<()> {
                             let retain = hook.name != hook_name;
                             if !retain {
                                 deleted = true;
-                                println!("Hook {hook_name} deleted");
+                                println!("Deleted hook {hook_name}");
                             }
                             retain
                         });
