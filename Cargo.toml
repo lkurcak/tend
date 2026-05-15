@@ -1,6 +1,6 @@
 [package]
 name = "tend"
-version = "1.0.0"
+version = "2.0.0"
 authors = ["Ľubomír Kurčák <lubomirkurcak@gmail.com>"]
 description = "Save, run, and automatically restart command-line jobs"
 edition = "2024"
