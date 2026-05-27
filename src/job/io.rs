@@ -4,7 +4,10 @@ use anyhow::Result;
 use std::path::PathBuf;
 use tabled::{
     builder::Builder,
-    settings::{object::{Columns, Rows}, Color, Modify, Style},
+    settings::{
+        Color, Modify, Style,
+        object::{Columns, Rows},
+    },
 };
 
 impl Job {
@@ -184,8 +187,12 @@ impl Job {
         } else {
             if !no_color {
                 table
-                    .with(Modify::new(Columns::new(1..=1)).with(Color::new("\x1b[1;36m", "\x1b[0m")))
-                    .with(Modify::new(Columns::new(2..=2)).with(Color::new("\x1b[1;33m", "\x1b[0m")))
+                    .with(
+                        Modify::new(Columns::new(1..=1)).with(Color::new("\x1b[1;36m", "\x1b[0m")),
+                    )
+                    .with(
+                        Modify::new(Columns::new(2..=2)).with(Color::new("\x1b[1;33m", "\x1b[0m")),
+                    )
                     .with(Modify::new(Rows::first()).with(Color::new("\x1b[1;34m", "\x1b[0m")));
             }
 
