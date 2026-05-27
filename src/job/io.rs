@@ -1,8 +1,11 @@
 use super::{Job, filter};
 use crate::colors::Tend;
 use anyhow::Result;
-use prettytable::{Table, format, row};
 use std::path::PathBuf;
+use tabled::{
+    builder::Builder,
+    settings::{object::{Columns, Rows}, Color, Modify, Style},
+};
 
 impl Job {
     fn jobs_dir() -> Result<PathBuf> {
@@ -135,30 +138,16 @@ impl Job {
 
     pub fn list(job_filter: &filter::Filter, verbose: bool, no_color: bool) -> Result<()> {
         let jobs = Self::jobs_dir()?;
-        let mut table = Table::new();
-        table.set_format(*format::consts::FORMAT_CLEAN);
-
-        if no_color {
-            table.set_titles(row![
-                "ENABLED",
-                "JOB",
-                "PROGRAM",
-                "ARGS",
-                "WORKING DIRECTORY",
-                "RESTART",
-                "GROUP",
-            ]);
-        } else {
-            table.set_titles(row![FB =>
-                "ENABLED",
-                "JOB",
-                "PROGRAM",
-                "ARGS",
-                "WORKING DIRECTORY",
-                "RESTART",
-                "GROUP",
-            ]);
-        }
+        let mut builder = Builder::default();
+        builder.push_record([
+            "ENABLED",
+            "JOB",
+            "PROGRAM",
+            "ARGS",
+            "WORKING DIRECTORY",
+            "RESTART",
+            "GROUP",
+        ]);
 
         for entry in std::fs::read_dir(jobs)? {
             let entry = entry?;
@@ -173,34 +162,34 @@ impl Job {
                     continue;
                 }
 
-                if no_color {
-                    table.add_row(row![
-                        r->if job.enabled { "*" } else { " " },
-                        &job.name,
-                        &job.program,
-                        job.args.join(" "),
-                        job.working_directory.display(),
-                        job.restart_behaviour(),
-                        job.group,
-                    ]);
-                } else {
-                    table.add_row(row![
-                        r->if job.enabled { "*" } else { " " },
-                        bFC->&job.name,
-                        bFY->&job.program,
-                        job.args.join(" "),
-                        job.working_directory.display(),
-                        job.restart_behaviour(),
-                        job.group,
-                    ]);
-                }
+                let enabled = if job.enabled { "*" } else { " " };
+
+                builder.push_record([
+                    enabled,
+                    &job.name,
+                    &job.program,
+                    &job.args.join(" "),
+                    &job.working_directory.display().to_string(),
+                    job.restart_behaviour(),
+                    &job.group,
+                ]);
             }
         }
 
-        if table.is_empty() {
+        let mut table = builder.build();
+        table.with(Style::blank());
+
+        if table.count_rows() <= 1 {
             println!("No matching jobs found");
         } else {
-            table.printstd();
+            if !no_color {
+                table
+                    .with(Modify::new(Columns::new(1..=1)).with(Color::new("\x1b[1;36m", "\x1b[0m")))
+                    .with(Modify::new(Columns::new(2..=2)).with(Color::new("\x1b[1;33m", "\x1b[0m")))
+                    .with(Modify::new(Rows::first()).with(Color::new("\x1b[1;34m", "\x1b[0m")));
+            }
+
+            println!("{table}");
         }
 
         Ok(())
