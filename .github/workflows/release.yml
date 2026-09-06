@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Get the release version from the tag
         if: env.VERSION == ''
         run: echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
@@ -46,7 +46,7 @@ jobs:
     permissions:
       id-token: write     # Required for OIDC token exchange
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: rust-lang/crates-io-auth-action@v1
         id: auth
       - run: cargo publish
@@ -111,7 +111,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master

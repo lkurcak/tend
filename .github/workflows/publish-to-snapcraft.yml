@@ -23,7 +23,7 @@ jobs:
     outputs:
       snap-file: ${{ steps.build-snap.outputs.snap }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Create snapcraft.yaml
       run: |
         echo "name: tend" > snapcraft.yaml
