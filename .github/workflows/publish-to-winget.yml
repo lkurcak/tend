@@ -22,7 +22,7 @@ jobs:
         id: version
         run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
       - name: Submit package to Windows Package Manager Community Repository
-        uses: vedantmgoyal2009/winget-releaser@v2
+        uses: vedantmgoyal9/winget-releaser@v2
         with:
           identifier: lkurcak.tend
           version: ${{ steps.version.outputs.version }}
