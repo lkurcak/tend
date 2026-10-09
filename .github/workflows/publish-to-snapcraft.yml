@@ -4,7 +4,7 @@ on:
     branches:
       - main
     tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
 
 jobs:
@@ -30,7 +30,7 @@ jobs:
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
           echo "version: git" >> snapcraft.yaml
         else
-          echo "version: ${{ github.ref_name }}" >> snapcraft.yaml
+          echo "version: ${GITHUB_REF_NAME#v}" >> snapcraft.yaml
         fi
         echo "summary: Command-line tool for managing and running multiple processes" >> snapcraft.yaml
         echo "description: Command-line tool for managing and running multiple processes" >> snapcraft.yaml
