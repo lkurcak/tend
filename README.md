@@ -3,7 +3,6 @@
 [![Build status](https://github.com/lkurcak/tend/workflows/release/badge.svg)](https://github.com/lkurcak/tend/actions)
 [![Crates.io](https://img.shields.io/crates/v/tend.svg?color=blue)](https://crates.io/crates/tend)
 [![WinGet Package Version](https://img.shields.io/winget/v/lkurcak.tend?color=blue)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/l/lkurcak/tend)
-[![Snapcraft](https://snapcraft.io/tend/badge.svg)](https://snapcraft.io/tend)
 
 `tend` is a command-line process manager for commands you run often. Save a command as a job, run one job or a group of jobs, and let `tend` restart them when they exit or when output hooks match.
 
@@ -19,11 +18,6 @@ brew install lkurcak/tap/tend
 **Winget (Windows):**
 ```sh
 winget install lkurcak.tend
-```
-
-**Snapcraft:**
-```sh
-sudo snap install tend
 ```
 
 **Binary:**

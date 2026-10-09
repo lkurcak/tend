@@ -22,33 +22,6 @@ jobs:
         run: |
           tend --version
 
-  snap:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Update and install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y snapd
-        sudo systemctl enable --now snapd.socket
-        sudo ln -s /var/lib/snapd/snap /snap
-
-    - name: Ensure snapd is running
-      run: |
-        sudo systemctl start snapd
-
-    - name: Install
-      run: |
-        sudo snap install tend
-
-    - name: List installed snaps
-      run: |
-        snap list
-
-    - name: Run
-      run: |
-        tend --version
-
   homebrew-macos:
     runs-on: macos-latest
     steps:
