@@ -57,18 +57,43 @@ jobs:
     name: update-homebrew
     needs:
       - create-release
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - name: Update Homebrew formula
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          app-id: ${{ vars.TAP_APP_ID }}
+          private-key: ${{ secrets.TAP_APP_PRIVATE_KEY }}
+          repositories: homebrew-tap
+      - uses: actions/checkout@v7
+        with:
+          repository: lkurcak/homebrew-tap
+          token: ${{ steps.app-token.outputs.token }}
+      - name: Open formula bump PR
         env:
-          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          VERSION: ${{ needs.create-release.outputs.version }}
         run: |
-          version="${{ needs.create-release.outputs.version }}"
-          brew tap lkurcak/tap
-          brew bump-formula-pr \
-            --no-browse \
-            --version="$version" \
-            lkurcak/tap/tend
+          url="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${GITHUB_REF_NAME}.tar.gz"
+          sha256=$(curl -fsSL "$url" | sha256sum | cut -d' ' -f1)
+          formula=Formula/tend.rb
+
+          sed -i -E \
+            -e "s|^  url \".*\"$|  url \"${url}\"|" \
+            -e "s|^  sha256 \"[0-9a-f]+\"$|  sha256 \"${sha256}\"|" \
+            "$formula"
+          git diff --exit-code --quiet "$formula" && { echo "::error::$formula unchanged"; exit 1; }
+
+          branch="bump-tend-${VERSION}"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)+${APP_SLUG}[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git commit -am "tend ${VERSION}"
+          git push -u origin "$branch"
+          gh pr create --title "tend ${VERSION}" --body "Automated bump from ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}"
 
   build-release:
     name: build-release
