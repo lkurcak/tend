@@ -14,12 +14,18 @@ jobs:
   winget:
     name: Publish winget package
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag_name || github.event.release.tag_name }}
     steps:
+      # Tags are vX.Y.Z; winget versions are bare.
+      - name: Read version from tag
+        id: version
+        run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
       - name: Submit package to Windows Package Manager Community Repository
         uses: vedantmgoyal2009/winget-releaser@v2
         with:
           identifier: lkurcak.tend
-          version: ${{ inputs.tag_name || github.event.release.tag_name }}
+          version: ${{ steps.version.outputs.version }}
           installers-regex: .*windows.*\.zip$
-          release-tag: ${{ inputs.tag_name || github.event.release.tag_name }}
+          release-tag: ${{ env.TAG }}
           token: ${{ secrets.WINGET_PAT }}
