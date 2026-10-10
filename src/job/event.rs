@@ -58,7 +58,7 @@ pub enum Stream {
     Any,
 }
 
-/// TODO: Rework [`Job::restart`] to use this instead of [`JobRestartStrategy`]
+/// TODO: Rework [`Job::restart`] to use this instead of [`RestartStrategy`]
 #[derive(Debug, Clone, Serialize, Deserialize, clap::Parser)]
 pub enum Event {
     // FinishedSuccess,
