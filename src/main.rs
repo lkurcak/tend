@@ -5,6 +5,8 @@
 #![deny(clippy::pedantic)]
 #![deny(clippy::nursery)]
 #![warn(clippy::cargo)]
+// Duplicates deep in the dependency tree aren't ours to fix.
+#![allow(clippy::multiple_crate_versions)]
 #![deny(missing_debug_implementations)]
 #![deny(unused_imports)]
 #![deny(unused_variables)]
@@ -30,7 +32,6 @@
     clippy::flat_map_option,
     clippy::float_cmp_const,
     clippy::fn_params_excessive_bools,
-    clippy::from_iter_instead_of_collect,
     clippy::if_let_mutex,
     clippy::implicit_clone,
     clippy::imprecise_flops,
